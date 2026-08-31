@@ -1,0 +1,28 @@
+# Build outputs
+**/bin/
+**/obj/
+**/dist/
+**/node_modules/
+
+# IDE
+.vs/
+.vscode/
+*.user
+
+# Runtime data (uploaded avatars, logs) — not source
+backend/TaskManager.API/wwwroot/avatars/*
+!backend/TaskManager.API/wwwroot/avatars/.gitkeep
+**/logs/
+
+# Secrets
+.env
+*.env
+!.env.example
+
+# Claude Code local-only state
+.claude/settings.local.json
+.claude/scheduled_tasks.lock
+
+# OS
+.DS_Store
+Thumbs.db

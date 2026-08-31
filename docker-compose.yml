@@ -1,0 +1,29 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080" # API, directly (MCP server, webhooks, out-of-band callers)
+      - "8081:8081" # Frontend (Nginx), proxies /api and /avatars to the API above
+    environment:
+      # Required — no default is baked into the image (PREP.4's Production
+      # guard fails the container fast if this is missing). Set it in a
+      # local .env file (see .env.example) rather than committing it here.
+      - Jwt__Secret=${JWT_SECRET:?Set JWT_SECRET in a .env file — see .env.example}
+      # Optional overrides — uncomment to point at a different/external
+      # Postgres instead of the one bundled in this same container. If you
+      # do, update POSTGRES_PASSWORD to match.
+      # - DatabaseSettings__ConnectionString=Host=db;Port=5432;Database=taskmanager;Username=postgres;Password=...
+      # - SEQ_URL=http://seq:5341
+      # - LOG_FILE_PATH=/app/api/logs/taskmanager-.log
+    volumes:
+      - /mnt/user/appdata/taskmanager/pgdata:/var/lib/postgresql/data
+      - /mnt/user/appdata/taskmanager/avatars:/app/api/wwwroot/avatars
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O-", "http://127.0.0.1:8080/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+      retries: 3
