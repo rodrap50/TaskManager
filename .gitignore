@@ -26,3 +26,7 @@ backend/TaskManager.API/wwwroot/avatars/*
 # OS
 .DS_Store
 Thumbs.db
+
+# Working planning docs — exploratory/feature-scoping notes, not tracked history.
+# Convert into TICKETS.md/TASKS.md via the planner tool when a plan is ready to build.
+.plan/
