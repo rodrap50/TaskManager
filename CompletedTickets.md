@@ -2008,3 +2008,87 @@ Verified live: to properly test the scope-gate rather than just the emptiness ch
 
 > **Done — signed off 2026-08-31.** Pre-existing `docker-compose.yml` (previously two separate `backend`+`db` services, no frontend, no `Jwt__Secret`, Postgres's `5432` exposed straight to the host) rewritten to a single `app` service around the new monolithic image — `JWT_SECRET` required via a `.env` file (`.env.example` added documenting it), Postgres no longer exposed externally, volumes for `/mnt/user/appdata/taskmanager/pgdata` and `/mnt/user/appdata/taskmanager/avatars`. Full verification performed live (not simulated): `docker build` succeeds; fresh empty-volume boot brings the app up healthy on `/health` with the frontend loading on 8081; a full browser walkthrough completed the AUTH02 first-run admin setup, logged in, and created a project end-to-end through the real UI; the API was confirmed independently reachable on its own port 8080 (both an unauthenticated and an authenticated request matched behavior on 8081); stopping/removing the container and re-running against the same volumes preserved the same login and project, with `postgres-init` correctly skipping re-initialization; omitting `Jwt__Secret` on a fresh run correctly failed fast with PREP.4's existing error instead of starting silently misconfigured.
 
+---
+
+## MCP01 Tickets — gRPC Contracts + API gRPC Surface
+
+**Epic:** gRPC Contracts + API gRPC Surface — ✅ Done (Sprint 9, signed off 2026-09-17)
+
+> Establishes the shared gRPC contract between `TaskManager.API` and the future `TaskManager.Mcp` (MCP03), plus the API-side gRPC services that mirror the existing REST controllers. See [MCP-ARCHITECTURE.md](MCP-ARCHITECTURE.md) for the full topology and [TASKS.md](TASKS.md#mcp01) for the epic summary. Alongside this epic, `TaskManager.API`'s `Program.cs` was also refactored (ad hoc, user-requested) into `backend/TaskManager.API/Startup/WebApplicationBuilderExtensions.cs`/`WebApplicationExtensions.cs` — not a ticket of its own, but touches the same file MCP01.2's Kestrel wiring lives in, so it's noted here for anyone reading this epic's history.
+
+| Ticket | Title | Status | Blocked By |
+|---|---|---|---|
+| MCP01.1 | `TaskManager.Grpc.Contracts` project + proto definitions | ✅ Done | — |
+| MCP01.2 | Second internal-only gRPC Kestrel endpoint + `AddGrpc()` wiring | ✅ Done | MCP01.1 |
+| MCP01.3 | `ProjectsGrpcService` + `EpicsGrpcService` | ✅ Done | MCP01.2 |
+| MCP01.4 | `TasksGrpcService` + `PhasesGrpcService` | ✅ Done | MCP01.2 |
+
+---
+
+### MCP01.1 — `TaskManager.Grpc.Contracts` Project + Proto Definitions
+
+**File:** `backend/TaskManager.Grpc.Contracts/` (new project)
+
+**Goal:** Establish the shared gRPC contract between `TaskManager.API` and `TaskManager.Mcp`.
+
+**Acceptance criteria:**
+- New `backend/TaskManager.Grpc.Contracts/` project added to the solution, referencing `Grpc.Tools`/`Google.Protobuf` for codegen
+- `projects.proto`, `epics.proto`, `tasks.proto`, `phases.proto` define messages mirroring `ProjectDto`, `EpicDto`, `ProjectTaskDto`, `ProjectPhaseDto` field-for-field
+- Service definitions mirror the REST surface 1:1: `ListProjects`, `GetProject`, `ListEpicsByProject`, `CreateEpic`, `UpdateEpic`, `ListPhasesByProject`, `ListTasksByProject`, `GetTask`, `CreateTask`, `UpdateTask`, `TransitionTask`
+- `dotnet build backend/TaskManager.Grpc.Contracts` succeeds and produces generated C# client and server base classes for every service
+- No other project references `TaskManager.Grpc.Contracts` yet — this ticket is contract-only (MCP01.2 and MCP03.3 consume it)
+
+> **Done — signed off 2026-09-17.** New net10.0 classlib added to `TaskManager.slnx`, referencing `Grpc.Tools`+`Google.Protobuf`+`Grpc.Core.Api` — the ticket named only the first two, but generating **server** base classes via `GrpcServices="Both"` also needs `Grpc.Core.Api` at compile time, confirmed by building. Four proto files mirror the DTOs field-for-field: `phases.proto`/`epics.proto`/`tasks.proto` (leaves, no imports) and `projects.proto` (imports all three, since `ProjectDto` embeds Phases/Epics/Tasks). Guid fields → `string`; nullable scalars → proto3 `optional`; `Dictionary<Guid,int>`/`Dictionary<string,string>` → proto `map<string,...>`; enums prefixed (`TASK_STATUS_*`/`TASK_PRIORITY_*`/`PROJECT_SCOPE_*`) per proto style guide. Needed `ProtoRoot="Protos"` on the `<Protobuf>` MSBuild item — the default per-file proto root fails cross-file imports with "File not found" otherwise. Verified: full-solution `dotnet build` succeeds; both `*Base` (server) and `*Client` (client) classes generated for all 4 services; confirmed no other project references it yet.
+
+---
+
+### MCP01.2 — Second Internal-Only gRPC Kestrel Endpoint + `AddGrpc()` Wiring
+
+**File:** `backend/TaskManager.API/Program.cs`, `backend/TaskManager.API/TaskManager.API.csproj`
+
+**Goal:** Give `TaskManager.API` a gRPC-capable, internal-only network surface to host the new services on.
+
+**Acceptance criteria:**
+- `TaskManager.API.csproj` references `TaskManager.Grpc.Contracts` and `Grpc.AspNetCore`
+- `Program.cs` calls `builder.Services.AddGrpc()`
+- A second Kestrel endpoint is bound via `ListenAnyIP(<grpc-port>, o => o.Protocols = HttpProtocols.Http2)` — cleartext HTTP/2, distinct from the existing REST port
+- The new gRPC port is not referenced anywhere in the Nginx config under `docker/` — confirmed not proxied, matching the existing plain-HTTP API port's direct/internal posture (per the D01–D03 README note on "API (direct, e.g. for the MCP server or webhooks)")
+- `dotnet build` succeeds with no gRPC services registered yet — this ticket is transport-only; MCP01.3/MCP01.4 add the actual services
+
+> **Done — signed off 2026-09-17.** `TaskManager.API` now references `TaskManager.Grpc.Contracts` + `Grpc.AspNetCore`; a second cleartext HTTP/2 (h2c) Kestrel endpoint binds on port 8082 alongside the existing REST endpoint (logic now lives in `Startup/WebApplicationBuilderExtensions.cs`'s `ConfigureGrpc`, after the later Program.cs refactor). **A real gotcha caught by testing empirically before touching the real app:** calling `ListenAnyIP` inside `ConfigureKestrel` silently disables `ASPNETCORE_URLS`-based endpoint binding entirely — confirmed with a throwaway console app (Kestrel logs "Overriding address(es)... Binding to endpoints defined via IConfiguration and/or UseKestrel() instead" and drops the REST endpoint otherwise). Fixed by parsing the existing `ASPNETCORE_URLS`/`urls` config and re-declaring those REST endpoint(s) (with `UseHttps()` if the scheme is https) alongside the new gRPC-only endpoint. Verified: full-solution build succeeds with no gRPC services mapped yet (transport-only, as scoped); `docker/nginx.conf` untouched, doesn't reference port 8082; later confirmed live (during MCP01.3/MCP01.4's verification and the Program.cs refactor) that both ports actually bind and REST keeps serving traffic correctly end-to-end against the real dev DB.
+
+---
+
+### MCP01.3 — `ProjectsGrpcService` + `EpicsGrpcService`
+
+**File:** `backend/TaskManager.API/Grpc/ProjectsGrpcService.cs`, `backend/TaskManager.API/Grpc/EpicsGrpcService.cs`
+
+**Goal:** Expose Projects and Epics over gRPC without duplicating business logic.
+
+**Acceptance criteria:**
+- `ProjectsGrpcService` implements the generated base class, calling the same MediatR queries `ProjectsController` already calls (`ListProjects`, `GetProject`) and mapping results to proto messages
+- `EpicsGrpcService` implements `ListEpicsByProject`, `CreateEpic`, `UpdateEpic` the same way
+- Both services are registered via `app.MapGrpcService<T>()` and carry `[Authorize]`, matching the REST controllers' auth posture
+- A gRPC call with no token returns `UNAUTHENTICATED`; a gRPC call with a valid token returns data matching the equivalent REST response for the same underlying data (spot-checked live with a gRPC test client, e.g. `grpcurl` or a throwaway console client)
+- `ProjectsController`/`EpicsController` are unmodified — the new services sit next to them, not instead of them
+
+> **Done — signed off 2026-09-17.** New `ProjectsGrpcService`/`EpicsGrpcService`, both `[Authorize]`-gated and registered via `MapGrpcService<T>()`, plus a shared `GrpcMappingExtensions.cs` (DTO↔proto mapping, reused by MCP01.4). `ProjectsGrpcService` implements `ListProjects`/`GetProject`; `EpicsGrpcService` implements `ListEpicsByProject`/`CreateEpic`/`UpdateEpic` — all calling the exact same MediatR queries/commands the REST controllers already call. **Real bug caught before it ran:** `ProjectDto.Scope`/`ProjectTaskDto.Status`/`ProjectTaskDto.Priority` are plain `string` (via `.ToString()` in `MappingExtensions.cs`), not the domain enum types — mapping needed `System.Enum.Parse<T>` first (fully qualified, since `Google.Protobuf.WellKnownTypes.Enum` collides with `System.Enum` once that namespace is imported). Verified fully live against the real dev DB: minted a throwaway JWT locally using the known dev signing secret (no real password needed), ran the real API, drove a throwaway gRPC console client through the full matrix — no-token → `UNAUTHENTICATED`; `ListProjects`/`GetProject` with token → data matches REST exactly, field-by-field, cross-checked via `curl`; bad-GUID → `InvalidArgument`; nonexistent id → `NotFound`; `CreateEpic`/`UpdateEpic` against a dedicated throwaway project → both work, partial-update semantics correct (unset field ⇒ unchanged); cross-checked final state via REST afterward, identical. `ProjectsController`/`EpicsController` untouched.
+
+---
+
+### MCP01.4 — `TasksGrpcService` + `PhasesGrpcService`
+
+**File:** `backend/TaskManager.API/Grpc/TasksGrpcService.cs`, `backend/TaskManager.API/Grpc/PhasesGrpcService.cs`
+
+**Goal:** Expose Tasks and Phases over gRPC, completing the hierarchy surface.
+
+**Acceptance criteria:**
+- `TasksGrpcService` implements `ListTasksByProject`, `GetTask`, `CreateTask`, `UpdateTask`, `TransitionTask`, calling the same MediatR handlers `TasksController` already calls
+- `PhasesGrpcService` implements `ListPhasesByProject` the same way
+- Both carry `[Authorize]`; registered via `app.MapGrpcService<T>()`
+- A gRPC `TransitionTask` call against a real dev-DB task produces the same status change and the same validation errors (e.g. an invalid transition) as the equivalent REST call
+- `TasksController`/`PhasesController` are unmodified
+- Full-solution build check: `dotnet build` succeeds across `TaskManager.Domain`, `TaskManager.Application`, `TaskManager.Infrastructure`, `TaskManager.API`, and `TaskManager.Grpc.Contracts` together, with every gRPC service having a matching client stub generated from the same `.proto` files — confirms a contract change can't be picked up on only one side without failing the build
+
+> **Done — signed off 2026-09-17.** New `TasksGrpcService`/`PhasesGrpcService`, same `[Authorize]`+`MapGrpcService<T>()` pattern. `TasksGrpcService` implements `ListTasksByProject`/`GetTask`/`CreateTask`/`UpdateTask`/`TransitionTask`; `PhasesGrpcService` implements `ListPhasesByProject`. Added reverse `ToDomain()` enum mappers (proto→domain) to `GrpcMappingExtensions.cs` alongside MCP01.3's forward `ToGrpc()` ones. **Found and fixed a real gap affecting MCP01.3 too, not just this ticket's new code:** neither `EpicsGrpcService` nor the new Tasks service mapped `FluentValidation.ValidationException`/domain `InvalidOperationException` (e.g. `ProjectTask.Transition`'s invalid-state guard) to a clean gRPC status — both would have surfaced as a generic `Unknown` instead of matching REST's 400/422. Fixed with a new shared `backend/TaskManager.API/Grpc/GrpcExceptionMapping.cs` (`ValidationException`→`InvalidArgument`, `InvalidOperationException`→`FailedPrecondition`), applied to every mutating RPC in both `EpicsGrpcService` (retrofit) and `TasksGrpcService`. Verified live end-to-end (13 scenarios): no-token → `UNAUTHENTICATED` on every service; empty-title/empty-name → `InvalidArgument` with the FluentValidation message (both Tasks and the Epics retrofit); full task lifecycle via gRPC (`CreateTask`→`GetTask`→`UpdateTask`→`TransitionTask` Backlog→InProgress→Done) with the invalid transition Done→InProgress correctly returning `FailedPrecondition`, matching REST's `InvalidOperationException`→422 exactly; `ListPhasesByProject` works and is auth-gated; cross-checked final task state via REST afterward, identical. Full-solution `dotnet build` succeeds across all 5 backend projects together, satisfying the cross-project build-check criterion. `TasksController`/`PhasesController` untouched.
+

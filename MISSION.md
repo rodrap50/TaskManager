@@ -89,9 +89,9 @@ ComponentName/
 
 Styles are always a hook (`useXStyles()`), never a plain exported constant — keeps the door open for prop/state-driven class logic without changing the calling convention. `index.ts` keeps import paths short (`from './ProjectCard'`, not `from './ProjectCard/ProjectCard'`). Applied so far to `App/`, `App/FloatingPill/`, `App/FloatingNav/`, and `screens/ProjectSelectorScreen/` (plus its `ProjectCard/` and `CreateProjectModal/` children).
 
-### MCP Server (Phase 9)
+### MCP Server (Phase 11)
 
-A lightweight Node.js/TypeScript MCP (Model Context Protocol) server that exposes the task manager to AI agents (Claude Code, Claude Desktop). Runs as a separate Docker container on the internal network; communicates with the .NET API via REST.
+`TaskManager.Mcp` — a C# MCP (Model Context Protocol) server (`ModelContextProtocol.AspNetCore`) that exposes Projects, Epics, Tasks, and Phases to AI agents (Claude Code, Claude Desktop, and other MCP-capable clients, local or hosted), plus a separate `AgentPlan`/`AgentStep` concept for tracking an agent's own step-by-step work. Runs as its own Docker container, reachable over Tailscale/LAN via remote Streamable HTTP; internally it calls `TaskManager.API` over gRPC (internal-only, not REST), forwarding the caller's `ApiToken` bearer token so the API remains the single place a token is ever validated. See [MCP-ARCHITECTURE.md](MCP-ARCHITECTURE.md) for the full topology diagram and architectural decisions, and [TASKS.md](TASKS.md#-sprint-9--post-deployment-mcp-agent-integration) (Sprint 9, epics MCP01–MCP07) for tickets.
 
 ### Deployment Target
 
@@ -139,6 +139,7 @@ No raw Tailwind color utilities (`gray-*`, `blue-*`, `red-*`, `dark:` variants) 
 | File | Purpose |
 |---|---|
 | [MISSION.md](MISSION.md) | This file — goals, pillars, architecture overview |
+| [MCP-ARCHITECTURE.md](MCP-ARCHITECTURE.md) | MCP server topology, component breakdown, and architectural decisions (Sprint 9) |
 | [ROADMAP.md](ROADMAP.md) | Phase-by-phase execution plan with completion status |
 | [TASKS.md](TASKS.md) | Epic / feature board (sprint view) |
 | [TICKETS.md](TICKETS.md) | Active granular tickets for pending epics |
