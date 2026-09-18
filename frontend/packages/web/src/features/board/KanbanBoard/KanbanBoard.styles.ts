@@ -1,6 +1,25 @@
 export const useKanbanBoardStyles = () => ({
-    board: 'flex h-full gap-6 overflow-x-auto p-4 pb-6',
-    columnBase: 'flex w-64 flex-shrink-0 flex-col rounded-xl border-2 shadow-[0_8px_24px_-8px_rgba(0,0,0,0.4)] transition-colors',
+    // Two elements, deliberately. Relying on the scroller itself to shrink-to-fit
+    // (auto width as a flex item of BoardScreen's `items-center` column) does
+    // centre it, but it also lets the scroller grow to max-content instead of
+    // capping at the container — so it never overflows, never scrolls, and gets
+    // clipped by <main>'s overflow-x-hidden. Pinning the scroller to w-full and
+    // centring an inner track with mx-auto gives both behaviours reliably:
+    // narrower than the scroller, auto margins centre the track; wider, they
+    // collapse to 0 and it scrolls from a true start position.
+    //
+    // mx-auto rather than justify-center on purpose — justify-content makes
+    // overflowing content unreachable past the start edge; auto margins are the
+    // standard way around that.
+    boardScroller: 'flex min-h-0 w-full flex-1 overflow-x-auto px-3 pb-6 pt-1 sm:p-4 sm:pb-6',
+    // shrink-0 keeps the track at max-content (a flex item would otherwise
+    // shrink to fit and hide the overflow again); stretch gives it full height.
+    boardTrack: 'mx-auto flex shrink-0 gap-3 sm:gap-6',
+    // Applied by KanbanBoard.tsx only while the strip actually overflows — see
+    // the useEffect there for why this can't be a plain breakpoint.
+    boardSnap: 'snap-x snap-mandatory',
+    columnBase: 'flex w-[82vw] max-w-72 flex-shrink-0 snap-center flex-col rounded-xl border-2 ' +
+        'shadow-[0_8px_24px_-8px_rgba(0,0,0,0.4)] transition-colors sm:w-64 sm:max-w-none',
     columnIdle: 'border-border bg-surface-raised',
     columnOver: 'border-primary-700 bg-primary-900/10',
     columnInvalid: 'border-border bg-surface-raised opacity-40 cursor-not-allowed',

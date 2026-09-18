@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import type { ProjectTaskDto, ProjectPhaseDto, EpicDto, AppUserDto, TaskStatus } from '@taskmanager/shared';
 import { transitionTask, resolveAssetUrl } from '@taskmanager/shared';
@@ -33,10 +33,31 @@ export function KanbanBoard({ tasks, epics, users, onTaskClick }: Props) {
     const [draggedId, setDraggedId]   = useState<string | null>(null);
     const [overCol, setOverCol]       = useState<Status | null>(null);
     const [toast, setToast]           = useState<string | null>(null);
+    const boardRef = useRef<HTMLDivElement>(null);
+    const [overflowing, setOverflowing] = useState(false);
 
     useEffect(() => {
         setLocalTasks(tasks);
     }, [tasks]);
+
+    // Scroll snapping is wanted only while the columns actually overflow — a
+    // phone always, a narrow desktop window sometimes, a wide one never. That
+    // is a content-vs-container question, not a viewport-width one, so a `sm:`
+    // breakpoint can't express it: the same 900px window overflows with the
+    // 4-column board but wouldn't with 3. Measure instead. The ResizeObserver
+    // covers both inputs — a window resize changes clientWidth, and crossing
+    // the `sm` breakpoint (column width 82vw → 16rem) changes it too.
+    useEffect(() => {
+        const el = boardRef.current;
+        if (!el) return;
+
+        const measure = () => setOverflowing(el.scrollWidth > el.clientWidth + 1);
+        measure();
+
+        const observer = new ResizeObserver(measure);
+        observer.observe(el);
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         if (!toast) return;
@@ -98,59 +119,61 @@ export function KanbanBoard({ tasks, epics, users, onTaskClick }: Props) {
     };
 
     return (
-        <div className={styles.board}>
-            {COLUMNS.map(col => {
-                const colTasks = boardTasks
-                    .filter(t => t.status === col.status)
-                    .sort((a, b) => b.weightedScore - a.weightedScore);
-                const isOver    = overCol === col.status;
-                const isInvalid = draggedId !== null && isLockedOut(col.status);
-                return (
-                    <div
-                        key={col.status}
-                        onDragOver={e => onDragOver(e, col.status)}
-                        onDrop={e => void onDrop(e, col.status)}
-                        className={`${styles.columnBase} ${isInvalid ? styles.columnInvalid : isOver ? styles.columnOver : styles.columnIdle}`}
-                    >
-                        <div className={styles.header}>
-                            <h3 className={styles.headerLabel}>{col.label}</h3>
-                            <span className={styles.countBadge}>
-                                {colTasks.length}
-                            </span>
-                        </div>
+        <div ref={boardRef} className={`${styles.boardScroller} ${overflowing ? styles.boardSnap : ''}`}>
+            <div className={styles.boardTrack}>
+                {COLUMNS.map(col => {
+                    const colTasks = boardTasks
+                        .filter(t => t.status === col.status)
+                        .sort((a, b) => b.weightedScore - a.weightedScore);
+                    const isOver    = overCol === col.status;
+                    const isInvalid = draggedId !== null && isLockedOut(col.status);
+                    return (
+                        <div
+                            key={col.status}
+                            onDragOver={e => onDragOver(e, col.status)}
+                            onDrop={e => void onDrop(e, col.status)}
+                            className={`${styles.columnBase} ${isInvalid ? styles.columnInvalid : isOver ? styles.columnOver : styles.columnIdle}`}
+                        >
+                            <div className={styles.header}>
+                                <h3 className={styles.headerLabel}>{col.label}</h3>
+                                <span className={styles.countBadge}>
+                                    {colTasks.length}
+                                </span>
+                            </div>
 
-                        <div className={styles.taskList}>
-                            {colTasks.map(task => {
-                                const assignee = task.assignedUserId ? userMap[task.assignedUserId] : undefined;
-                                return (
-                                    <div
-                                        key={task.id}
-                                        draggable
-                                        onDragStart={e => onDragStart(e, task.id)}
-                                        onDragEnd={onDragEnd}
-                                        className={`${styles.taskWrapBase} ${draggedId === task.id ? styles.taskDragging : styles.taskIdle}`}
-                                    >
-                                        <TaskCard
-                                            task={task}
-                                            epicName={task.epicId ? epicMap[task.epicId]?.name : undefined}
-                                            epicColorHex={task.epicId ? epicMap[task.epicId]?.colorHex : undefined}
-                                            assigneeName={assignee?.displayName}
-                                            assigneeAvatarUrl={resolveAssetUrl(assignee?.avatarUrl)}
-                                            onClick={() => onTaskClick?.(task)}
-                                        />
+                            <div className={styles.taskList}>
+                                {colTasks.map(task => {
+                                    const assignee = task.assignedUserId ? userMap[task.assignedUserId] : undefined;
+                                    return (
+                                        <div
+                                            key={task.id}
+                                            draggable
+                                            onDragStart={e => onDragStart(e, task.id)}
+                                            onDragEnd={onDragEnd}
+                                            className={`${styles.taskWrapBase} ${draggedId === task.id ? styles.taskDragging : styles.taskIdle}`}
+                                        >
+                                            <TaskCard
+                                                task={task}
+                                                epicName={task.epicId ? epicMap[task.epicId]?.name : undefined}
+                                                epicColorHex={task.epicId ? epicMap[task.epicId]?.colorHex : undefined}
+                                                assigneeName={assignee?.displayName}
+                                                assigneeAvatarUrl={resolveAssetUrl(assignee?.avatarUrl)}
+                                                onClick={() => onTaskClick?.(task)}
+                                            />
+                                        </div>
+                                    );
+                                })}
+
+                                {colTasks.length === 0 && (
+                                    <div className={`${styles.emptyBase} ${isOver ? styles.emptyOver : styles.emptyIdle}`}>
+                                        No tasks
                                     </div>
-                                );
-                            })}
-
-                            {colTasks.length === 0 && (
-                                <div className={`${styles.emptyBase} ${isOver ? styles.emptyOver : styles.emptyIdle}`}>
-                                    No tasks
-                                </div>
-                            )}
+                                )}
+                            </div>
                         </div>
-                    </div>
-                );
-            })}
+                    );
+                })}
+            </div>
 
             {toast && (
                 <div className={styles.toast}>

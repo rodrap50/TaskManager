@@ -65,21 +65,21 @@ export function BoardScreen() {
                 </div>
                 <div className={styles.headerActions}>
                     {selectedProjectId && (
-                        <button type="button" onClick={() => setShowCreateTask(true)} className={styles.newTaskButton}>
+                        <button type="button" onClick={() => setShowCreateTask(true)} className={styles.newTaskButton} aria-label="New task" title="New task">
                             <Plus className={styles.newTaskButtonIcon} />
-                            New Task
+                            <span className={styles.buttonLabel}>New Task</span>
                         </button>
                     )}
                     {selectedProjectId && (
-                        <button type="button" onClick={() => setShowMembersPanel(true)} className={styles.membersButton}>
+                        <button type="button" onClick={() => setShowMembersPanel(true)} className={styles.membersButton} aria-label="Members" title="Members">
                             <Users className={styles.membersButtonIcon} />
-                            Members
+                            <span className={styles.buttonLabel}>Members</span>
                         </button>
                     )}
                     {selectedProjectId && project?.scope === 'Project' && (
-                        <button type="button" onClick={() => setShowEpicsPanel(true)} className={styles.membersButton}>
+                        <button type="button" onClick={() => setShowEpicsPanel(true)} className={styles.membersButton} aria-label="Epics" title="Epics">
                             <Layers className={styles.membersButtonIcon} />
-                            Epics
+                            <span className={styles.buttonLabel}>Epics</span>
                         </button>
                     )}
                     {!isDailyTask && (

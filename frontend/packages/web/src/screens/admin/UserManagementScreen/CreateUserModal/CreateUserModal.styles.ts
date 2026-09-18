@@ -13,8 +13,8 @@ export const useCreateUserModalStyles = () => ({
     toggleKnobOff: 'translate-x-0.5',
     errorBox: 'mb-4 rounded-md border border-primary-800/40 bg-primary-900/10 px-3 py-2 text-sm text-primary-700',
     actionsRow: 'flex gap-3 pt-2',
-    cancelButton: 'flex-1 rounded-lg border border-border py-2 text-sm font-medium text-text-muted ' +
-        'transition-colors hover:bg-surface hover:text-text',
-    submitButton: 'flex-1 rounded-lg bg-primary-800 py-2 text-sm font-medium text-text-inverted ' +
-        'transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50',
+    cancelButton: 'min-h-11 flex-1 rounded-lg border border-border py-2 text-sm font-medium text-text-muted ' +
+        'transition-colors hover:bg-surface hover:text-text sm:min-h-0',
+    submitButton: 'min-h-11 flex-1 rounded-lg bg-primary-800 py-2 text-sm font-medium text-text-inverted ' +
+        'transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0',
 });

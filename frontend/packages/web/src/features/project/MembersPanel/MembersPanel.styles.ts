@@ -1,12 +1,13 @@
 export const useMembersPanelStyles = () => ({
-    backdrop: 'fixed inset-0 z-40 bg-black/50',
-    panel: 'fixed inset-y-0 right-0 z-50 flex w-[420px] max-w-full flex-col border-l border-border bg-surface-raised shadow-2xl ' +
+    // z-[55]/z-[60] to clear the fixed FloatingNav — see TaskDetailPanel.styles.
+    backdrop: 'fixed inset-0 z-[55] bg-black/50',
+    panel: 'fixed inset-y-0 right-0 z-[60] flex w-[420px] max-w-full flex-col border-l border-border bg-surface-raised shadow-2xl ' +
         'animate-[drawerIn_220ms_ease-out] motion-reduce:animate-none',
-    header: 'flex items-center justify-between gap-3 border-b border-border px-6 py-4',
+    header: 'flex items-center justify-between gap-3 border-b border-border px-4 py-4 sm:px-6',
     titleText: 'text-base font-semibold text-text',
-    closeButton: 'shrink-0 rounded-md p-1 text-text-muted transition-colors hover:bg-surface hover:text-text',
+    closeButton: 'shrink-0 rounded-md p-2 text-text-muted transition-colors hover:bg-surface hover:text-text sm:p-1',
     closeIcon: 'h-4 w-4',
-    body: 'flex-1 overflow-y-auto px-6 py-4',
+    body: 'flex-1 overflow-y-auto px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6',
 
     loadingText: 'text-sm text-text-muted',
     emptyText: 'text-sm text-text-muted',
@@ -16,8 +17,8 @@ export const useMembersPanelStyles = () => ({
     memberRow: 'flex items-center justify-between gap-3 rounded-lg px-1 py-1.5',
     memberIdentity: 'flex items-center gap-2.5',
     memberUsername: 'text-sm font-medium text-text',
-    removeButton: 'shrink-0 rounded-md p-1.5 text-text-muted transition-colors hover:bg-surface hover:text-primary-700 ' +
-        'disabled:cursor-not-allowed disabled:opacity-50',
+    removeButton: 'shrink-0 rounded-md p-2.5 text-text-muted transition-colors hover:bg-surface hover:text-primary-700 ' +
+        'disabled:cursor-not-allowed disabled:opacity-50 sm:p-1.5',
     removeButtonIcon: 'h-4 w-4',
     rowError: 'px-1 pb-2 text-xs text-primary-700',
 

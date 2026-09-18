@@ -1,18 +1,26 @@
+/*
+ * Drawers sit above FloatingNav (z-50), not under it: the nav is `fixed`, so at
+ * the old z-40/z-50 pairing it painted on top of the drawer — harmless-looking
+ * on a wide screen, but on a phone the drawer is full-width and the nav lands
+ * squarely over the Cancel/Save footer. Backdrop z-[55] also blocks taps on the
+ * nav while the drawer is open, which is the behaviour a modal surface wants.
+ * MembersPanel and EpicsPanel use the same pairing.
+ */
 export const useTaskDetailPanelStyles = () => ({
-    backdrop: 'fixed inset-0 z-40 bg-black/50',
-    panel: 'fixed inset-y-0 right-0 z-50 flex w-[480px] max-w-full flex-col border-l border-border bg-surface-raised shadow-2xl ' +
+    backdrop: 'fixed inset-0 z-[55] bg-black/50',
+    panel: 'fixed inset-y-0 right-0 z-[60] flex w-[480px] max-w-full flex-col border-l border-border bg-surface-raised shadow-2xl ' +
         'animate-[drawerIn_220ms_ease-out] motion-reduce:animate-none',
-    header: 'flex items-start justify-between gap-3 border-b border-border px-6 py-4',
+    header: 'flex items-start justify-between gap-3 border-b border-border px-4 py-4 sm:px-6',
     titleText: 'flex-1 truncate text-base font-semibold text-text',
     titleInput: 'flex-1 rounded-lg border border-primary-700 bg-surface px-2 py-1 text-base font-semibold text-text ' +
         'focus:outline-none',
     headerActions: 'flex shrink-0 items-center gap-2',
-    editButton: 'flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-text-muted ' +
+    editButton: 'flex min-h-9 items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs font-medium text-text-muted ' +
         'transition-colors hover:border-border-subtle hover:text-text',
     editButtonIcon: 'h-3.5 w-3.5',
-    closeButton: 'shrink-0 rounded-md p-1 text-text-muted transition-colors hover:bg-surface hover:text-text',
+    closeButton: 'shrink-0 rounded-md p-2 text-text-muted transition-colors hover:bg-surface hover:text-text sm:p-1',
     closeIcon: 'h-4 w-4',
-    body: 'flex-1 overflow-y-auto px-6 py-4',
+    body: 'flex-1 overflow-y-auto px-4 py-4 sm:px-6',
     descriptionText: 'mb-5 text-sm text-text',
     descriptionPlaceholder: 'mb-5 text-sm italic text-text-muted',
     descriptionInput: 'mb-5 w-full resize-none rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text ' +
@@ -21,7 +29,10 @@ export const useTaskDetailPanelStyles = () => ({
     readOnlyValue: 'mb-5 text-sm font-medium text-text',
     readOnlyAssignee: 'mb-5 flex items-center gap-2',
     pillRow: 'mb-5 flex flex-wrap gap-2',
-    pillBase: 'rounded-full border px-3 py-1 text-xs font-medium transition-colors',
+    // Status/priority/phase pills are the only way to move a task on touch
+    // (HTML5 drag-and-drop on the Kanban board does not fire on mobile), so
+    // they get a taller tap target than the 22px the desktop sizing gives them.
+    pillBase: 'rounded-full border px-3 py-2 text-xs font-medium transition-colors sm:py-1',
     pillActive: 'border-transparent bg-primary-800 text-text-inverted',
     pillInactive: 'border-border text-text-muted hover:border-border-subtle hover:text-text',
     assigneeRow: 'mb-5 flex gap-2 overflow-x-auto px-1 py-1',
@@ -33,10 +44,10 @@ export const useTaskDetailPanelStyles = () => ({
         'focus:border-primary-700 focus:outline-none',
     dateOverdue: 'mb-5 text-sm font-semibold text-primary-700',
     fieldError: 'mt-1 mb-3 text-xs text-primary-700',
-    footer: 'border-t border-border px-6 py-4',
+    footer: 'border-t border-border px-4 pt-4 pb-[calc(1rem+env(safe-area-inset-bottom))] sm:px-6',
     footerButtons: 'flex gap-3',
-    cancelButton: 'flex-1 rounded-lg border border-border py-2 text-sm font-medium text-text-muted ' +
-        'transition-colors hover:bg-surface hover:text-text',
-    saveButton: 'flex-1 rounded-lg bg-primary-800 py-2 text-sm font-medium text-text-inverted ' +
-        'transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50',
+    cancelButton: 'min-h-11 flex-1 rounded-lg border border-border py-2 text-sm font-medium text-text-muted ' +
+        'transition-colors hover:bg-surface hover:text-text sm:min-h-0',
+    saveButton: 'min-h-11 flex-1 rounded-lg bg-primary-800 py-2 text-sm font-medium text-text-inverted ' +
+        'transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0',
 });
