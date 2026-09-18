@@ -116,6 +116,11 @@
   filter: none;
 }
 
+html {
+  /* Stops iOS Safari inflating text in landscape. */
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   margin: 0;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
@@ -123,4 +128,27 @@ body {
     sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  /* The app owns the full viewport and scrolls internally (App.styles' <main>),
+     so page-level rubber-banding / pull-to-refresh only ever fights the user. */
+  overscroll-behavior-y: none;
+  /* Kills the grey flash Chrome/Android paints over every tapped button. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/*
+ * iOS Safari auto-zooms the viewport whenever a focused field's font-size is
+ * under 16px, and never zooms back out — every input in this app is text-sm
+ * (14px), so that fires on every single form. Raising the floor to 16px below
+ * the `sm` breakpoint avoids it without touching the desktop type scale.
+ *
+ * Deliberately unlayered: Tailwind's utilities live in @layer utilities, and
+ * unlayered rules outcompete layered ones regardless of specificity, so this
+ * beats text-sm without needing !important or per-input overrides.
+ */
+@media (max-width: 639px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
 }
