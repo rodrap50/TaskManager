@@ -28,7 +28,25 @@ public sealed class ApiToken
 
     public bool IsRevoked => RevokedAt.HasValue;
 
-    public ApiToken(string name, string tokenHash, Guid createdByUserId)
+    /// <summary>When true, the write-guard middleware (MCP02.3) blocks non-safe requests/RPCs
+    /// authenticated with this token, across both REST and gRPC.</summary>
+    public bool IsReadOnly { get; private set; }
+
+    /// <summary>Non-null once set, the token stops authenticating from this point on.</summary>
+    public DateTime? ExpiresAt { get; private set; }
+
+    public bool IsExpired => ExpiresAt is { } exp && exp <= DateTime.UtcNow;
+
+    /// <summary>Null means the system default rate limit applies (MCP02.4) — never unlimited.</summary>
+    public int? RateLimitPerMinute { get; private set; }
+
+    public ApiToken(
+        string name,
+        string tokenHash,
+        Guid createdByUserId,
+        bool isReadOnly = false,
+        DateTime? expiresAt = null,
+        int? rateLimitPerMinute = null)
     {
         if (string.IsNullOrWhiteSpace(name))
             throw new ArgumentException("Name must not be null or whitespace.", nameof(name));
@@ -39,12 +57,15 @@ public sealed class ApiToken
         if (createdByUserId == Guid.Empty)
             throw new ArgumentException("CreatedByUserId must be a valid, non-empty GUID.", nameof(createdByUserId));
 
-        Id              = Guid.NewGuid();
-        Name            = name.Trim();
-        TokenHash       = tokenHash;
-        CreatedByUserId = createdByUserId;
-        CreatedAt       = DateTime.UtcNow;
-        RevokedAt       = null;
+        Id                 = Guid.NewGuid();
+        Name               = name.Trim();
+        TokenHash          = tokenHash;
+        CreatedByUserId    = createdByUserId;
+        CreatedAt          = DateTime.UtcNow;
+        RevokedAt          = null;
+        IsReadOnly         = isReadOnly;
+        ExpiresAt          = expiresAt;
+        RateLimitPerMinute = rateLimitPerMinute;
     }
 
     /// <summary>

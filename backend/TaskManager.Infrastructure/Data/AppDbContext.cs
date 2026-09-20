@@ -237,6 +237,9 @@ public class AppDbContext : DbContext
 
             b.Property(t => t.Name).HasMaxLength(100).IsRequired();
             b.Property(t => t.TokenHash).IsRequired();
+            b.Property(t => t.IsReadOnly).IsRequired();
+            b.Property(t => t.ExpiresAt);
+            b.Property(t => t.RateLimitPerMinute);
 
             // No navigation property either side — CreatedByUserId is informational only.
             b.HasOne<AppUser>()

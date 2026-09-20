@@ -208,11 +208,11 @@
 
 | Ticket | Title | Status | Blocked By |
 |---|---|---|---|
-| MCP02.1 | `ApiToken` entity fields + migration | 🔲 Pending | — |
-| MCP02.2 | `ApiTokenAuthenticationHandler`: expiry + claims | 🔲 Pending | MCP02.1 |
-| MCP02.3 | Write-guard middleware | 🔲 Pending | MCP02.2 |
-| MCP02.4 | Rate limiting middleware | 🔲 Pending | MCP02.2 |
-| MCP02.5 | `CreateApiTokenCommand` + `ApiTokensController` field support | 🔲 Pending | MCP02.1 |
+| MCP02.1 | `ApiToken` entity fields + migration | 🔍 In Review | — |
+| MCP02.2 | `ApiTokenAuthenticationHandler`: expiry + claims | 🔍 In Review | MCP02.1 |
+| MCP02.3 | Write-guard middleware | 🔍 In Review | MCP02.2 |
+| MCP02.4 | Rate limiting middleware | 🔍 In Review | MCP02.2 |
+| MCP02.5 | `CreateApiTokenCommand` + `ApiTokensController` field support | 🔍 In Review | MCP02.1 |
 
 ---
 

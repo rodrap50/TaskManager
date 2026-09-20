@@ -41,6 +41,7 @@ public class Program
         var allowedOriginCache = builder.ConfigureCors();
         var jwtSettings = builder.ConfigureAuthentication();
         builder.ConfigureGrpc();
+        builder.ConfigureRateLimiting();
 
         var app = builder.Build();
 

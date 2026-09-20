@@ -117,7 +117,7 @@
 | # | Epic | Status | Blocked By |
 |---|---|---|---|
 | 18 | [MCP01 — gRPC Contracts + API gRPC Surface](#mcp01) | ✅ Done | #11 |
-| 19 | [MCP02 — ApiToken Scoping](#mcp02) | 🔲 Pending | #11 |
+| 19 | [MCP02 — ApiToken Scoping](#mcp02) | 🔍 In Review | #11 |
 | 20 | [MCP03 — Scaffold TaskManager.Mcp](#mcp03) | 🔲 Pending | #18 |
 | 21 | [MCP04 — Hierarchy MCP Tools](#mcp04) | 🔲 Pending | #20, #19 |
 | 22 | [MCP05 — Agent Plan Tracking MCP Tools](#mcp05) | 🔲 Pending | #20 |
@@ -325,7 +325,7 @@ New `TaskManager.Grpc.Contracts` project (`.proto` files mirroring the existing 
 ---
 
 ### MCP02
-**ApiToken Scoping** — 🔲 Pending
+**ApiToken Scoping** — 🔍 In Review
 `ApiToken` gains `IsReadOnly` (default `false`), `ExpiresAt` (default `null`), `RateLimitPerMinute` (default `null` = system default, never unlimited), and a computed `IsExpired` property, plus an EF migration (`ApiTokenScoping`). `ApiTokenAuthenticationHandler` rejects expired tokens and adds `isReadOnly`/`rateLimitPerMinute` claims. New write-guard middleware (not an MVC action filter — action filters don't run for gRPC endpoints) blocks non-safe requests from read-only tokens, covering REST and gRPC uniformly. New in-process rate-limiting middleware (`Microsoft.AspNetCore.RateLimiting`, partitioned by `apiTokenId` claim, no Redis/external limiter — single-host deployment) covers both transports the same way. `CreateApiTokenCommand`/`ApiTokensController` gain the three new fields; stays `[Authorize(Roles = "Admin")]`. See [TICKETS.md](TICKETS.md#mcp02-tickets--apitoken-scoping) for tickets.
 
 ---

@@ -5,4 +5,7 @@ public record ApiTokenDto(
     string Name,
     DateTime CreatedAt,
     Guid CreatedByUserId,
-    DateTime? RevokedAt);
+    DateTime? RevokedAt,
+    bool IsReadOnly,
+    DateTime? ExpiresAt,
+    int? RateLimitPerMinute);
