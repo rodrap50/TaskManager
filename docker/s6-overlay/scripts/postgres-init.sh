@@ -1,6 +1,11 @@
 #!/bin/sh
 set -e
 
+if [ -n "$DISABLE_BUNDLED_POSTGRES" ]; then
+    echo "[postgres-init] DISABLE_BUNDLED_POSTGRES is set — skipping bundled Postgres initialization"
+    exit 0
+fi
+
 # s6-rc's oneshot runner invokes this as root — drop to the unprivileged app
 # user before touching PGDATA or Postgres.
 if [ "$(id -u)" = "0" ]; then
