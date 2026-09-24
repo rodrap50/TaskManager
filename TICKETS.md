@@ -296,7 +296,7 @@
 |---|---|---|---|
 | MCP03.1 | `TaskManager.Mcp` project scaffold | 🔍 In Review | — |
 | MCP03.2 | `AgentPlan`/`AgentStep` entities + `McpDbContext` + initial migration | 🔍 In Review | MCP03.1 |
-| MCP03.3 | `GrpcClients/` wrapper | 🔲 Pending | MCP01.1, MCP03.1 |
+| MCP03.3 | `GrpcClients/` wrapper | 🔍 In Review | MCP01.1, MCP03.1 |
 
 ---
 
