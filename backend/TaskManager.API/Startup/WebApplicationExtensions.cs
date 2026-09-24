@@ -1,9 +1,11 @@
 using FluentValidation;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using Serilog;
 using TaskManager.API.Grpc;
+using TaskManager.API.Middleware;
 using TaskManager.Application.Common.Exceptions;
 using TaskManager.Application.Common.Interfaces;
 using TaskManager.Infrastructure.Data;
@@ -126,6 +128,16 @@ public static class WebApplicationExtensions
 
         app.UseAuthentication();
         app.UseAuthorization();
+
+        // Rate limiter (MCP02.4) — reads the PerApiToken policy's endpoint metadata
+        // (attached in ConfigureEndpoints), so it must run after routing/auth have resolved
+        // both the endpoint and the claims the policy partitions by.
+        app.UseRateLimiter();
+
+        // Write-guard (MCP02.3) — blocks non-safe REST/mutating gRPC requests from a
+        // read-only ApiToken. Deliberately after UseAuthorization, not an MVC action filter
+        // (filters don't run for gRPC), so it covers both transports identically.
+        app.UseMiddleware<WriteGuardMiddleware>();
     }
 
     public static void ConfigureEndpoints(this WebApplication app)
@@ -133,14 +145,15 @@ public static class WebApplicationExtensions
         // No [Authorize] — Docker's healthcheck can't carry a JWT.
         app.MapHealthChecks("/health").AllowAnonymous();
 
-        app.MapControllers();
+        app.MapControllers().RequireRateLimiting("PerApiToken");
 
         // gRPC services (MCP01.3/MCP01.4) — bound only to the second Kestrel endpoint in
         // practice (nothing routes REST traffic to a gRPC content-type), each carrying
-        // [Authorize] to match the REST controllers' auth posture.
-        app.MapGrpcService<ProjectsGrpcService>();
-        app.MapGrpcService<EpicsGrpcService>();
-        app.MapGrpcService<TasksGrpcService>();
-        app.MapGrpcService<PhasesGrpcService>();
+        // [Authorize] to match the REST controllers' auth posture, and the same PerApiToken
+        // rate-limit policy (MCP02.4) REST controllers carry.
+        app.MapGrpcService<ProjectsGrpcService>().RequireRateLimiting("PerApiToken");
+        app.MapGrpcService<EpicsGrpcService>().RequireRateLimiting("PerApiToken");
+        app.MapGrpcService<TasksGrpcService>().RequireRateLimiting("PerApiToken");
+        app.MapGrpcService<PhasesGrpcService>().RequireRateLimiting("PerApiToken");
     }
 }

@@ -1,13 +1,17 @@
 using System.Text;
+using Grpc.Core;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.AspNetCore.Server.Kestrel.Core;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
+using System.Threading.RateLimiting;
 using TaskManager.API.Authentication;
+using TaskManager.API.Middleware;
 using TaskManager.API.Services;
 using TaskManager.Application;
 using TaskManager.Application.Common.Interfaces;
@@ -231,5 +235,52 @@ public static class WebApplicationBuilderExtensions
         });
 
         builder.Services.AddGrpc();
+    }
+
+    public static void ConfigureRateLimiting(this WebApplicationBuilder builder)
+    {
+        // In-process only (no Redis/external limiter — MISSION.md's no-cloud-dependencies
+        // pillar). Scoped to ApiToken-authenticated callers only: a JWT (human) principal
+        // never carries an apiTokenId claim, so it falls into the no-op partition below and
+        // is never throttled by this policy.
+        const int DefaultRateLimitPerMinute = 60;
+        const string RateLimitMessage = "Rate limit exceeded for this API token.";
+
+        builder.Services.AddRateLimiter(options =>
+        {
+            options.OnRejected = async (context, cancellationToken) =>
+            {
+                if (GrpcRejectionResponse.IsGrpcRequest(context.HttpContext))
+                {
+                    GrpcRejectionResponse.WriteTrailersOnly(context.HttpContext, StatusCode.ResourceExhausted, RateLimitMessage);
+                    return;
+                }
+
+                context.HttpContext.Response.StatusCode  = StatusCodes.Status429TooManyRequests;
+                context.HttpContext.Response.ContentType = "application/json";
+                await context.HttpContext.Response.WriteAsync($$"""{"error":"{{RateLimitMessage}}"}""", cancellationToken);
+            };
+
+            // Applied via endpoint metadata (RequireRateLimiting in ConfigureEndpoints) rather
+            // than as a global limiter, so REST controllers and gRPC services opt in the same
+            // explicit way.
+            options.AddPolicy("PerApiToken", httpContext =>
+            {
+                var apiTokenId = httpContext.User.FindFirst("apiTokenId")?.Value;
+                if (apiTokenId is null)
+                    return RateLimitPartition.GetNoLimiter("no-api-token");
+
+                var rateLimitClaim = httpContext.User.FindFirst("rateLimitPerMinute")?.Value;
+                var permitLimit = int.TryParse(rateLimitClaim, out var claimed) ? claimed : DefaultRateLimitPerMinute;
+
+                return RateLimitPartition.GetFixedWindowLimiter(apiTokenId, _ => new FixedWindowRateLimiterOptions
+                {
+                    PermitLimit       = permitLimit,
+                    Window            = TimeSpan.FromMinutes(1),
+                    QueueLimit        = 0,
+                    AutoReplenishment = true,
+                });
+            });
+        });
     }
 }

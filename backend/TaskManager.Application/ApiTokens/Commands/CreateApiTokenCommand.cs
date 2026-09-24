@@ -7,7 +7,12 @@ using TaskManager.Domain.Entities;
 
 namespace TaskManager.Application.ApiTokens.Commands;
 
-public record CreateApiTokenCommand(string Name, Guid CreatedByUserId) : IRequest<CreateApiTokenResult>;
+public record CreateApiTokenCommand(
+    string Name,
+    Guid CreatedByUserId,
+    bool IsReadOnly = false,
+    DateTime? ExpiresAt = null,
+    int? RateLimitPerMinute = null) : IRequest<CreateApiTokenResult>;
 
 /// <summary>The raw token is only ever returned here, at creation — never persisted, never shown again.</summary>
 public record CreateApiTokenResult(string Token, ApiTokenDto ApiToken);
@@ -28,7 +33,9 @@ public class CreateApiTokenCommandHandler : IRequestHandler<CreateApiTokenComman
         var rawToken  = RandomNumberGenerator.GetHexString(48);
         var tokenHash = _hasher.Hash(rawToken);
 
-        var apiToken = new ApiToken(request.Name, tokenHash, request.CreatedByUserId);
+        var apiToken = new ApiToken(
+            request.Name, tokenHash, request.CreatedByUserId,
+            request.IsReadOnly, request.ExpiresAt, request.RateLimitPerMinute);
 
         _uow.ApiTokens.Add(apiToken);
         await _uow.SaveChangesAsync(cancellationToken);

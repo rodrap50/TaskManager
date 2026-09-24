@@ -33,7 +33,9 @@ public class ApiTokensController : ControllerBase
     public async Task<ActionResult<CreateApiTokenResult>> CreateToken(
         [FromBody] CreateApiTokenRequest request, CancellationToken ct)
     {
-        var result = await _mediator.Send(new CreateApiTokenCommand(request.Name, _currentUser.UserId), ct);
+        var command = new CreateApiTokenCommand(
+            request.Name, _currentUser.UserId, request.IsReadOnly, request.ExpiresAt, request.RateLimitPerMinute);
+        var result = await _mediator.Send(command, ct);
         return Created(string.Empty, result);
     }
 
@@ -45,4 +47,8 @@ public class ApiTokensController : ControllerBase
     }
 }
 
-public record CreateApiTokenRequest(string Name);
+public record CreateApiTokenRequest(
+    string Name,
+    bool IsReadOnly = false,
+    DateTime? ExpiresAt = null,
+    int? RateLimitPerMinute = null);
