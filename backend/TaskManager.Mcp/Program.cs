@@ -27,6 +27,11 @@ var dbConnectionString = builder.Configuration["MCP_DB_CONNECTION_STRING"] ?? de
 
 builder.Services.AddDbContext<McpDbContext>(options => options.UseNpgsql(dbConnectionString));
 
+// Lets tool methods take an IHttpContextAccessor parameter to read the caller's
+// x-api-token header (MCP04) — the SDK flows HttpContext through stateful HTTP-transport
+// tool calls specifically to support this.
+builder.Services.AddHttpContextAccessor();
+
 builder.Services.AddMcpServer()
     .WithHttpTransport()
     .WithToolsFromAssembly();

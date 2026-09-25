@@ -348,8 +348,8 @@
 
 | Ticket | Title | Status | Blocked By |
 |---|---|---|---|
-| MCP04.1 | Project + Epic MCP tools | 🔲 Pending | MCP03.3, MCP02.3 |
-| MCP04.2 | Task + Phase MCP tools | 🔲 Pending | MCP03.3, MCP02.3 |
+| MCP04.1 | Project + Epic MCP tools | 🔍 In Review | MCP03.3, MCP02.3 |
+| MCP04.2 | Task + Phase MCP tools | 🔍 In Review | MCP03.3, MCP02.3 |
 
 ---
 
