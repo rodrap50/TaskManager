@@ -386,8 +386,8 @@
 
 | Ticket | Title | Status | Blocked By |
 |---|---|---|---|
-| MCP05.1 | Plan-level tools (`create_agent_plan`, `get_agent_plan`, `complete_agent_plan`) | 🔲 Pending | MCP03.2 |
-| MCP05.2 | Step-level tools + full lifecycle smoke test | 🔲 Pending | MCP05.1 |
+| MCP05.1 | Plan-level tools (`create_agent_plan`, `get_agent_plan`, `complete_agent_plan`) | 🔍 In Review | MCP03.2 |
+| MCP05.2 | Step-level tools + full lifecycle smoke test | 🔍 In Review | MCP05.1 |
 
 ---
 
