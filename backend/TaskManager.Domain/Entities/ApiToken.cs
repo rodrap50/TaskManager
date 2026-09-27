@@ -64,7 +64,7 @@ public sealed class ApiToken
         CreatedAt          = DateTime.UtcNow;
         RevokedAt          = null;
         IsReadOnly         = isReadOnly;
-        ExpiresAt          = expiresAt;
+        ExpiresAt          = expiresAt.HasValue ? DateTime.SpecifyKind(expiresAt.Value, DateTimeKind.Utc) : null;
         RateLimitPerMinute = rateLimitPerMinute;
     }
 

@@ -424,8 +424,8 @@
 
 | Ticket | Title | Status | Blocked By |
 |---|---|---|---|
-| MCP06.1 | `ApiClient.ts` DTO + CRUD updates | 🔲 Pending | MCP02.5 |
-| MCP06.2 | `McpTokensScreen` + `AdminShell` wiring | 🔲 Pending | MCP06.1 |
+| MCP06.1 | `ApiClient.ts` DTO + CRUD updates | 🔍 In Review | MCP02.5 |
+| MCP06.2 | `McpTokensScreen` + `AdminShell` wiring | 🔍 In Review | MCP06.1 |
 
 ---
 
