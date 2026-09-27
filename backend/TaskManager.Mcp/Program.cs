@@ -19,11 +19,10 @@ builder.Services.AddSingleton<EpicsGrpcClient>();
 builder.Services.AddSingleton<PhasesGrpcClient>();
 builder.Services.AddSingleton<TasksGrpcClient>();
 
-// Dev fallback points at a database distinct from the monolith's "taskmanager" — MCP
-// tracking data is never FK-coupled to the monolith's schema (MCP03.2).
-const string devFallbackConnectionString =
-    "Host=localhost;Port=5432;Database=McpTracking;Username=postgres;Password=postgres";
-var dbConnectionString = builder.Configuration["MCP_DB_CONNECTION_STRING"] ?? devFallbackConnectionString;
+// A database distinct from the monolith's "taskmanager" — MCP tracking data is never
+// FK-coupled to the monolith's schema (MCP03.2). Dev value lives in appsettings.Development.json.
+var dbConnectionString = builder.Configuration["MCP_DB_CONNECTION_STRING"]
+    ?? throw new InvalidOperationException("MCP_DB_CONNECTION_STRING is not configured.");
 
 builder.Services.AddDbContext<McpDbContext>(options => options.UseNpgsql(dbConnectionString));
 
@@ -38,10 +37,14 @@ builder.Services.AddMcpServer()
 
 var app = builder.Build();
 
-app.Logger.LogInformation(
-    "TaskManager.Mcp starting. GrpcUrl={GrpcUrl}, DbConnectionConfigured={DbConnectionConfigured}",
-    grpcUrl, !string.IsNullOrWhiteSpace(builder.Configuration["MCP_DB_CONNECTION_STRING"]));
+app.Logger.LogInformation("TaskManager.Mcp starting. GrpcUrl={GrpcUrl}", grpcUrl);
+
+// Creates McpTracking if it doesn't exist yet, then applies pending migrations — same
+// migrate-on-startup convention as TaskManager.API, so a fresh compose stack needs no
+// manual `dotnet ef database update` (MCP07.2).
+using (var scope = app.Services.CreateScope())
+    await scope.ServiceProvider.GetRequiredService<McpDbContext>().Database.MigrateAsync();
 
 app.MapMcp();
 
-app.Run();
+await app.RunAsync();

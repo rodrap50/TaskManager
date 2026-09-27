@@ -463,8 +463,8 @@
 
 | Ticket | Title | Status | Blocked By |
 |---|---|---|---|
-| MCP07.1 | `TaskManager.Mcp` Dockerfile | 🔲 Pending | MCP03.1 |
-| MCP07.2 | `docker-compose.yml` service entry | 🔲 Pending | MCP07.1 |
+| MCP07.1 | `TaskManager.Mcp` Dockerfile | 🔍 In Review | MCP03.1 |
+| MCP07.2 | `docker-compose.yml` service entry | 🔍 In Review | MCP07.1 |
 | MCP07.3 | Internal-only surface check + end-to-end integration verification | 🔲 Pending | MCP07.2 |
 
 ---

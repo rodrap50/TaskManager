@@ -4,8 +4,10 @@ services:
       context: .
       dockerfile: Dockerfile
     ports:
-      - "8080:8080" # API, directly (MCP server, webhooks, out-of-band callers)
+      - "8080:8080" # API, directly (webhooks, out-of-band callers)
       - "8081:8081" # Frontend (Nginx), proxies /api and /avatars to the API above
+      # Not published: 8082 (gRPC, for the mcp service below) and 5432 (Postgres) —
+      # both reachable only over the internal compose network.
     environment:
       # Required — no default is baked into the image (PREP.4's Production
       # guard fails the container fast if this is missing). Set it in a
@@ -27,3 +29,20 @@ services:
       timeout: 5s
       start_period: 30s
       retries: 3
+
+  mcp:
+    build:
+      context: backend
+      dockerfile: TaskManager.Mcp/Dockerfile
+    ports:
+      - "8083:8080" # MCP endpoint (Streamable HTTP) — point MCP clients here over Tailscale/LAN
+    environment:
+      # Both legs stay on the internal compose network, never the host.
+      - TASKMANAGER_GRPC_URL=http://app:8082
+      # Same bundled Postgres as the app service, separate McpTracking database (created
+      # on first startup). Password must match the app image's POSTGRES_PASSWORD.
+      - MCP_DB_CONNECTION_STRING=Host=app;Port=5432;Database=McpTracking;Username=postgres;Password=taskmanager_internal
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
