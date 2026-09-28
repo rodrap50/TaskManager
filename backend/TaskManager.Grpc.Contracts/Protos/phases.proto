@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+option csharp_namespace = "TaskManager.Grpc.Contracts";
+
+package taskmanager;
+
+import "google/protobuf/timestamp.proto";
+
+// Mirrors TaskManager.Application.Common.DTOs.ProjectPhaseDto field-for-field.
+message ProjectPhaseMessage {
+  string id = 1;
+  string project_id = 2;
+  string name = 3;
+  optional string description = 4;
+  int32 display_order = 5;
+  google.protobuf.Timestamp created_at = 6;
+  google.protobuf.Timestamp updated_at = 7;
+}
+
+message ListPhasesByProjectRequest {
+  string project_id = 1;
+}
+
+message ListPhasesByProjectResponse {
+  repeated ProjectPhaseMessage phases = 1;
+}
+
+service PhasesGrpcService {
+  rpc ListPhasesByProject(ListPhasesByProjectRequest) returns (ListPhasesByProjectResponse);
+}

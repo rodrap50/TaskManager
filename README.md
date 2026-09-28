@@ -24,7 +24,8 @@ docker compose up -d
 ```
 
 - Frontend: `http://localhost:8081`
-- API (direct, e.g. for the MCP server or webhooks): `http://localhost:8080`
+- API (direct, e.g. for webhooks): `http://localhost:8080`
+- MCP server: `http://<host>:8083` — point MCP clients (Claude Desktop, Claude Code, etc.) here over Tailscale/LAN, sending an API token (Admin → MCP Tokens) in an `x-api-token` header. Its gRPC link to the API and its `McpTracking` database stay internal to the compose network.
 
 Postgres data and avatar uploads persist under `/mnt/user/appdata/taskmanager/` (see `docker-compose.yml`).
 

@@ -1,0 +1,50 @@
+syntax = "proto3";
+
+option csharp_namespace = "TaskManager.Grpc.Contracts";
+
+package taskmanager;
+
+import "google/protobuf/timestamp.proto";
+import "epics.proto";
+import "phases.proto";
+import "tasks.proto";
+
+// Mirrors TaskManager.Domain.Enums.ProjectScope.
+enum ProjectScopeValue {
+  PROJECT_SCOPE_PROJECT = 0;
+  PROJECT_SCOPE_DAILY_TASK = 1;
+}
+
+// Mirrors TaskManager.Application.Common.DTOs.ProjectDto field-for-field.
+message ProjectMessage {
+  string id = 1;
+  string name = 2;
+  optional string description = 3;
+  ProjectScopeValue scope = 4;
+  optional string color_hex = 5;
+  google.protobuf.Timestamp due_date = 6;
+  bool is_archived = 7;
+  int32 criticality_score = 8;
+  string created_by_user_id = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+  repeated ProjectPhaseMessage phases = 12;
+  repeated EpicMessage epics = 13;
+  repeated ProjectTaskMessage tasks = 14;
+}
+
+message ListProjectsRequest {
+}
+
+message ListProjectsResponse {
+  repeated ProjectMessage projects = 1;
+}
+
+message GetProjectRequest {
+  string id = 1;
+}
+
+service ProjectsGrpcService {
+  rpc ListProjects(ListProjectsRequest) returns (ListProjectsResponse);
+  rpc GetProject(GetProjectRequest) returns (ProjectMessage);
+}

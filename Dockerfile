@@ -2,8 +2,13 @@
 
 # ---------------------------------------------------------------------------
 # Stage: build-api — publish the .NET API (Release)
+#
+# Debian-based SDK image, not -alpine: the API references
+# TaskManager.Grpc.Contracts, whose protoc codegen needs Grpc.Tools' bundled
+# native protoc — only shipped as glibc Linux builds (no linux_musl_x64), so it
+# can't run under Alpine. The final runtime stage below is still Alpine.
 # ---------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/sdk:10.0-alpine AS build-api
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build-api
 WORKDIR /src
 
 COPY backend/TaskManager.slnx ./
@@ -11,6 +16,7 @@ COPY backend/TaskManager.API/TaskManager.API.csproj TaskManager.API/
 COPY backend/TaskManager.Application/TaskManager.Application.csproj TaskManager.Application/
 COPY backend/TaskManager.Domain/TaskManager.Domain.csproj TaskManager.Domain/
 COPY backend/TaskManager.Infrastructure/TaskManager.Infrastructure.csproj TaskManager.Infrastructure/
+COPY backend/TaskManager.Grpc.Contracts/TaskManager.Grpc.Contracts.csproj TaskManager.Grpc.Contracts/
 RUN dotnet restore "TaskManager.API/TaskManager.API.csproj"
 
 COPY backend/ .

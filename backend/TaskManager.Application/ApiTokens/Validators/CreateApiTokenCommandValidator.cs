@@ -13,5 +13,11 @@ public class CreateApiTokenCommandValidator : AbstractValidator<CreateApiTokenCo
 
         RuleFor(x => x.CreatedByUserId)
             .NotEmpty().WithMessage("CreatedByUserId is required.");
+
+        // FixedWindowRateLimiterOptions.PermitLimit (MCP02.4) throws for a non-positive
+        // value — reject it here instead of crashing on the token's first request.
+        RuleFor(x => x.RateLimitPerMinute)
+            .GreaterThan(0).WithMessage("RateLimitPerMinute must be a positive integer.")
+            .When(x => x.RateLimitPerMinute.HasValue);
     }
 }

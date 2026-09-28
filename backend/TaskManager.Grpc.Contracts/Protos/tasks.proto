@@ -1,0 +1,105 @@
+syntax = "proto3";
+
+option csharp_namespace = "TaskManager.Grpc.Contracts";
+
+package taskmanager;
+
+import "google/protobuf/timestamp.proto";
+
+// Mirrors TaskManager.Domain.Enums.TaskStatus.
+enum TaskStatusValue {
+  TASK_STATUS_BACKLOG = 0;
+  TASK_STATUS_IN_PROGRESS = 1;
+  TASK_STATUS_BLOCKED = 2;
+  TASK_STATUS_DONE = 3;
+  TASK_STATUS_CANCELLED = 4;
+}
+
+// Mirrors TaskManager.Domain.Enums.TaskPriority.
+enum TaskPriorityValue {
+  TASK_PRIORITY_LOW = 0;
+  TASK_PRIORITY_MEDIUM = 1;
+  TASK_PRIORITY_HIGH = 2;
+  TASK_PRIORITY_CRITICAL = 3;
+}
+
+// Mirrors TaskManager.Application.Common.DTOs.ProjectTaskDto field-for-field.
+message ProjectTaskMessage {
+  string id = 1;
+  string project_id = 2;
+  optional string phase_id = 3;
+  optional string epic_id = 4;
+  optional string assigned_user_id = 5;
+  optional string secondary_assignee_id = 6;
+  string title = 7;
+  optional string description = 8;
+  TaskStatusValue status = 9;
+  TaskPriorityValue priority = 10;
+  int32 weighted_score = 11;
+  // Keyed by voter user id (string-formatted Guid) -> cast vote value.
+  map<string, int32> votes = 12;
+  google.protobuf.Timestamp due_date = 13;
+  optional double estimated_hours = 14;
+  bool is_completed = 15;
+  map<string, string> external_metadata = 16;
+  google.protobuf.Timestamp created_at = 17;
+  google.protobuf.Timestamp updated_at = 18;
+}
+
+message ListTasksByProjectRequest {
+  string project_id = 1;
+}
+
+message ListTasksByProjectResponse {
+  repeated ProjectTaskMessage tasks = 1;
+}
+
+message GetTaskRequest {
+  string id = 1;
+}
+
+// Mirrors TaskManager.Application.Tasks.Commands.CreateTaskCommand.
+message CreateTaskRequest {
+  string project_id = 1;
+  string title = 2;
+  TaskPriorityValue priority = 3;
+  optional string description = 4;
+  optional string phase_id = 5;
+  optional string epic_id = 6;
+  optional string assigned_user_id = 7;
+  google.protobuf.Timestamp due_date = 8;
+  optional double estimated_hours = 9;
+}
+
+// Mirrors TasksController's UpdateTaskRequest / UpdateTaskCommand — the boolean
+// clear_* flags distinguish "leave unchanged" (field unset) from "clear to null".
+message UpdateTaskRequest {
+  string id = 1;
+  optional string title = 2;
+  optional string description = 3;
+  optional TaskPriorityValue priority = 4;
+  optional string phase_id = 5;
+  bool clear_phase = 6;
+  optional string epic_id = 7;
+  bool clear_epic = 8;
+  optional string assigned_user_id = 9;
+  bool clear_assignee = 10;
+  optional string secondary_assignee_id = 11;
+  bool clear_secondary_assignee = 12;
+  google.protobuf.Timestamp due_date = 13;
+  optional double estimated_hours = 14;
+}
+
+// Mirrors TasksController's TransitionRequest / TransitionTaskCommand.
+message TransitionTaskRequest {
+  string id = 1;
+  TaskStatusValue new_status = 2;
+}
+
+service TasksGrpcService {
+  rpc ListTasksByProject(ListTasksByProjectRequest) returns (ListTasksByProjectResponse);
+  rpc GetTask(GetTaskRequest) returns (ProjectTaskMessage);
+  rpc CreateTask(CreateTaskRequest) returns (ProjectTaskMessage);
+  rpc UpdateTask(UpdateTaskRequest) returns (ProjectTaskMessage);
+  rpc TransitionTask(TransitionTaskRequest) returns (ProjectTaskMessage);
+}
