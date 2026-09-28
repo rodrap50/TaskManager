@@ -56,6 +56,7 @@
 - [MCP05 — Agent Plan Tracking MCP Tools](#mcp05-tickets--agent-plan-tracking-mcp-tools) — MCP05.1–MCP05.2
 - [MCP06 — Frontend: MCP Tokens Admin Screen](#mcp06-tickets--frontend-mcp-tokens-admin-screen) — MCP06.1–MCP06.2
 - [MCP07 — Containerize & Wire into docker-compose](#mcp07-tickets--containerize--wire-into-docker-compose) — MCP07.1–MCP07.3
+- [MCP08 — Agent-Plan Tool Authentication](#mcp08-tickets--agent-plan-tool-authentication) — MCP08.1
 
 **🐘 Sprint 10 — Post-Deployment: Disable Bundled Postgres Toggle**
 - [D04 — Disable Bundled Postgres Toggle](#d04-tickets--disable-bundled-postgres-toggle) — D04.1–D04.2
@@ -465,7 +466,7 @@
 |---|---|---|---|
 | MCP07.1 | `TaskManager.Mcp` Dockerfile | 🔍 In Review | MCP03.1 |
 | MCP07.2 | `docker-compose.yml` service entry | 🔍 In Review | MCP07.1 |
-| MCP07.3 | Internal-only surface check + end-to-end integration verification | 🔲 Pending | MCP07.2 |
+| MCP07.3 | Internal-only surface check + end-to-end integration verification | 🔍 In Review | MCP07.2, MCP08.1 |
 
 ---
 
@@ -503,6 +504,53 @@
 - MCP end-to-end test: point a real MCP client (Claude Code's own `mcp` config, or the SDK's test client) at the running `mcp` service with a valid token; `list_projects`, `create_task`, and `create_agent_plan` all succeed end-to-end through the full container stack
 - The same test repeated with a revoked token fails cleanly at the MCP layer, not a hang or a raw 500
 - Findings (pass/fail per item above) reported back to the user before this ticket is marked Done
+
+**Findings (2026-09-27):**
+- Full solution build — ✅ Pass
+- Internal-only surface — ✅ Pass
+- End-to-end with a valid token — ✅ Pass
+- Revoked token — ❌ Partial. The hierarchy tools (`list_projects`, `create_task`) fail cleanly with an MCP auth error. The agent-plan tools accept the revoked token (`create_agent_plan` succeeded). Tracked in [MCP08.1](#mcp08-tickets--agent-plan-tool-authentication).
+
+Moved to 🔍 In Review on 2026-09-28 at the user's request. Rerun the revoked-token criterion after MCP08.1 lands.
+
+---
+
+## MCP08 Tickets — Agent-Plan Tool Authentication
+
+**Epic:** Agent-Plan Tool Authentication — 🔲 Pending (Sprint 9)
+
+> Found during MCP07.3's live end-to-end test (2026-09-27). The six MCP05 agent-plan tools read and write `McpDbContext` directly and never check the caller's token. Anyone who can reach the MCP port (Tailscale/LAN) can call them with no token or a revoked token, and a read-only token can write. Only agent-tracking data is exposed, not projects or tasks, but these are unauthenticated writes. See [TASKS.md](TASKS.md#mcp08) for the epic summary.
+
+| Ticket | Title | Status | Blocked By |
+|---|---|---|---|
+| MCP08.1 | Token validation RPC + agent-plan tool auth checks | 🔲 Pending | MCP05.2, MCP07.2 |
+
+---
+
+### MCP08.1 — Token Validation RPC + Agent-Plan Tool Auth Checks
+
+**File:** `backend/TaskManager.Grpc.Contracts/Protos/` (new RPC), `backend/TaskManager.API/Grpc/` (implementation), `backend/TaskManager.API/Startup/WebApplicationExtensions.cs`, `backend/TaskManager.Mcp/GrpcClients/` (wrapper method), `backend/TaskManager.Mcp/Tools/McpToolSupport.cs`, `backend/TaskManager.Mcp/Tools/AgentPlanTools.cs`, `backend/TaskManager.Mcp/Tools/AgentStepTools.cs`
+
+**Goal:** The six agent-plan tools reject a missing, invalid, revoked, or expired token, and reject writes from a read-only token, with `TaskManager.API` as the only place that decides whether a token is valid.
+
+**Approach:** Add a lightweight token-validation RPC (for example `ValidateToken`) to the API's gRPC surface. It authenticates through the existing `x-api-token` ApiToken/SmartAuth scheme and returns whether the token is valid plus its `isReadOnly` flag. The API stays the single source of truth for expiry, revocation, and read-only status. This keeps [MCP-ARCHITECTURE.md](MCP-ARCHITECTURE.md)'s "no duplicated auth logic in MCP" decision. The agent-plan tools call the RPC through a new `GrpcClients/` wrapper method and the shared `Tools/McpToolSupport.cs` helper before they touch `McpDbContext`.
+
+**Tradeoff (accepted):** The agent-plan tools gain a runtime dependency on `TaskManager.API`. MCP05 was deliberately designed to have none. If the API is down, the agent-plan tools fail too. Each agent-plan tool call also costs one extra gRPC round trip.
+
+**Acceptance criteria:**
+- A new token-validation RPC is defined in `backend/TaskManager.Grpc.Contracts/Protos/`. Its response carries whether the token is valid and the token's `isReadOnly` flag
+- The RPC is implemented under `backend/TaskManager.API/Grpc/` and authenticates through the existing `x-api-token` ApiToken/SmartAuth scheme. No new token-checking logic is added to the API
+- The RPC's service is mapped in `WebApplicationExtensions.cs` `ConfigureEndpoints` with the same `RequireRateLimiting("PerApiToken")` as the other gRPC services
+- The RPC is not in `WriteGuardMiddleware`'s `MutatingGrpcMethods` set (it is read-only, so a read-only token can call it)
+- Calling the RPC with a missing, invalid, revoked, or expired token returns `UNAUTHENTICATED`
+- `backend/TaskManager.Mcp/GrpcClients/` gains a wrapper method for the RPC that forwards the caller's token the same way the existing wrapper methods do
+- All six agent-plan tools (`create_agent_plan`, `get_agent_plan`, `complete_agent_plan`, `add_agent_step`, `complete_agent_step`, `fail_agent_step`) validate the token through `Tools/McpToolSupport.cs` before they read or write `McpDbContext`
+- A missing, invalid, revoked, or expired token on any agent-plan tool returns the same clean MCP auth error the hierarchy tools already give, and no `McpTracking` row is created or changed
+- A read-only token on `create_agent_plan`, `complete_agent_plan`, `add_agent_step`, `complete_agent_step`, or `fail_agent_step` returns a clean permission-denied error, and no `McpTracking` row is created or changed
+- A read-only token on `get_agent_plan` succeeds
+- Verified live against the `docker-compose.yml` stack: rerun MCP07.3's revoked-token test. `list_projects`, `create_task`, and `create_agent_plan` all fail cleanly with a revoked token
+- Verified live: an agent-plan tool call with no token fails with a clean auth error. With a read-only token, `create_agent_plan` fails with a clean permission-denied error and `get_agent_plan` succeeds
+- Verified live: with a valid read-write token, MCP05.2's full lifecycle smoke test still passes (no regression)
 
 ---
 

@@ -53,6 +53,7 @@
 | **MCP05** | Agent-plan audit-trail tools (`create_agent_plan`, `add_agent_step`, etc.) — these talk to `McpDbContext` **directly**, no gRPC hop, no dependency on `TaskManager.API` at all. Separate data path from MCP04. | `backend/TaskManager.Mcp/Tools/` |
 | **MCP06** | Frontend admin screen for managing these scoped tokens (flagged as possibly overlapping/superseding the deferred AUTH03 — unresolved, see below). | `frontend/packages/web/src/screens/admin/McpTokensScreen/` (new) |
 | **MCP07** | Dockerfile + `docker-compose.yml` entry. Only the MCP's own HTTP port is published (Tailscale/LAN); the gRPC leg and `McpTracking` Postgres connection stay internal-only on the Docker network — verified in MCP07.3 by literally trying to reach the gRPC port from outside the network and confirming it fails. | `backend/TaskManager.Mcp/Dockerfile` (new), `docker-compose.yml` |
+| **MCP08** | Token-validation RPC on `TaskManager.API`'s gRPC surface (valid/invalid + `isReadOnly`, authenticated via the existing `x-api-token` scheme), called by all six MCP05 agent-plan tools before they touch `McpDbContext`. Closes the gap MCP07.3 found (agent-plan tools accepted no token, revoked tokens, and read-only writes). Keeps the API as the only token validator, but gives MCP05's tools a runtime dependency on `TaskManager.API` plus one gRPC round trip per call. | `backend/TaskManager.Grpc.Contracts/Protos/`, `backend/TaskManager.API/Grpc/`, `backend/TaskManager.Mcp/GrpcClients/`, `backend/TaskManager.Mcp/Tools/` |
 
 ## Key architectural decisions
 

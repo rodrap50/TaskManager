@@ -1,0 +1,4 @@
+# Files copied into Linux containers must stay LF even on Windows checkouts with
+# core.autocrlf=true — a CRLF shell script fails with "set: illegal option -".
+*.sh      text eol=lf
+docker/** text eol=lf

@@ -123,6 +123,7 @@
 | 22 | [MCP05 — Agent Plan Tracking MCP Tools](#mcp05) | 🔲 Pending | #20 |
 | 23 | [MCP06 — Frontend: MCP Tokens Admin Screen](#mcp06) | 🔲 Pending | #19 |
 | 24 | [MCP07 — Containerize & Wire into docker-compose](#mcp07) | 🔲 Pending | #20, #21, #22 |
+| 25 | [MCP08 — Agent-Plan Tool Authentication](#mcp08) | 🔲 Pending | #22, MCP07.2 |
 
 ---
 
@@ -357,6 +358,12 @@ New `McpTokensScreen` (mirrors `AllowedOriginsScreen`'s shape: table + add form 
 ### MCP07
 **Containerize & Wire into docker-compose** — 🔲 Pending
 `TaskManager.Mcp` Dockerfile (multi-stage .NET build) and a new `docker-compose.yml` service entry. The MCP HTTP endpoint is exposed over Tailscale/LAN; the gRPC leg to `TaskManager.API` and the `McpTracking` Postgres connection stay internal-only on the Docker network, same deployment posture as the rest of the stack (mirrors D01–D03's monolithic image + D04's external-Postgres toggle). See [TICKETS.md](TICKETS.md#mcp07-tickets--containerize--wire-into-docker-compose) for tickets.
+
+---
+
+### MCP08
+**Agent-Plan Tool Authentication** — 🔲 Pending
+Found during MCP07.3's live end-to-end test (2026-09-27). The six MCP05 agent-plan tools (`create_agent_plan`, `get_agent_plan`, `complete_agent_plan`, `add_agent_step`, `complete_agent_step`, `fail_agent_step`) read and write `McpDbContext` directly and never check the caller's token. Anyone who can reach the MCP port (Tailscale/LAN) can call them with no token or a revoked token, and a read-only token can write. Only agent-tracking data is exposed, not projects or tasks, but these are unauthenticated writes. Fix: add a lightweight token-validation RPC to `TaskManager.API`'s gRPC surface (returns valid/invalid plus `isReadOnly`), authenticated through the existing `x-api-token` ApiToken/SmartAuth scheme. Every agent-plan tool calls it before it touches `McpDbContext`. The API stays the single source of truth for expiry, revocation, and read-only status, so MCP still has no duplicated auth logic. Tradeoff: the agent-plan tools gain a runtime dependency on `TaskManager.API` (MCP05 was designed to have none) and one extra gRPC round trip per call. See [TICKETS.md](TICKETS.md#mcp08-tickets--agent-plan-tool-authentication) for tickets.
 
 ---
 

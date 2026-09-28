@@ -31,7 +31,8 @@ fi
 # Outside the fresh-init branch so existing data directories pick it up too.
 # `samenet` = only the container's own subnets (the compose network); initdb's
 # defaults only allow loopback, which blocks sibling containers like TaskManager.Mcp.
-if ! grep -q "samenet" "$PGDATA/pg_hba.conf"; then
+# Anchored match: the stock pg_hba.conf mentions "samenet" in its header comments.
+if ! grep -q "^host all all samenet" "$PGDATA/pg_hba.conf"; then
     echo "[postgres-init] Allowing compose-network (samenet) connections in pg_hba.conf"
     echo "host all all samenet scram-sha-256" >> "$PGDATA/pg_hba.conf"
 fi
