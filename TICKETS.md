@@ -511,7 +511,9 @@
 - End-to-end with a valid token — ✅ Pass
 - Revoked token — ❌ Partial. The hierarchy tools (`list_projects`, `create_task`) fail cleanly with an MCP auth error. The agent-plan tools accept the revoked token (`create_agent_plan` succeeded). Tracked in [MCP08.1](#mcp08-tickets--agent-plan-tool-authentication).
 
-Moved to 🔍 In Review on 2026-09-28 at the user's request. Rerun the revoked-token criterion after MCP08.1 lands.
+Moved to 🔍 In Review on 2026-09-28 at the user's request.
+
+**Rerun (2026-09-28, after MCP08.1):** Revoked token — ✅ Pass. Against the compose stack, `list_projects`, `create_task`, and `create_agent_plan` all fail cleanly with the auth error, and no `McpTracking` row or task is created.
 
 ---
 
@@ -523,7 +525,7 @@ Moved to 🔍 In Review on 2026-09-28 at the user's request. Rerun the revoked-t
 
 | Ticket | Title | Status | Blocked By |
 |---|---|---|---|
-| MCP08.1 | Token validation RPC + agent-plan tool auth checks | 🔲 Pending | MCP05.2, MCP07.2 |
+| MCP08.1 | Token validation RPC + agent-plan tool auth checks | 🔍 In Review | MCP05.2, MCP07.2 |
 
 ---
 

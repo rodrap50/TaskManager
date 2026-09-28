@@ -18,6 +18,7 @@ builder.Services.AddSingleton<ProjectsGrpcClient>();
 builder.Services.AddSingleton<EpicsGrpcClient>();
 builder.Services.AddSingleton<PhasesGrpcClient>();
 builder.Services.AddSingleton<TasksGrpcClient>();
+builder.Services.AddSingleton<AuthGrpcClient>();
 
 // A database distinct from the monolith's "taskmanager" — MCP tracking data is never
 // FK-coupled to the monolith's schema (MCP03.2). Dev value lives in appsettings.Development.json.

@@ -155,5 +155,6 @@ public static class WebApplicationExtensions
         app.MapGrpcService<EpicsGrpcService>().RequireRateLimiting("PerApiToken");
         app.MapGrpcService<TasksGrpcService>().RequireRateLimiting("PerApiToken");
         app.MapGrpcService<PhasesGrpcService>().RequireRateLimiting("PerApiToken");
+        app.MapGrpcService<AuthGrpcService>().RequireRateLimiting("PerApiToken");
     }
 }

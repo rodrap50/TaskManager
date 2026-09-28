@@ -1,9 +1,11 @@
 using System.ComponentModel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ModelContextProtocol;
 using ModelContextProtocol.Server;
 using TaskManager.Mcp.Data;
 using TaskManager.Mcp.Entities;
+using TaskManager.Mcp.GrpcClients;
 
 namespace TaskManager.Mcp.Tools;
 
@@ -17,13 +19,15 @@ public record McpAgentStep(Guid Id, int StepNumber, string Status, string AgentI
 public static class AgentPlanTools
 {
     [McpServerTool(Name = "create_agent_plan")]
-    [Description("Creates a new agent plan for tracking multi-step work against a project. Lives entirely in TaskManager.Mcp's own tracking store — no call to TaskManager.API.")]
+    [Description("Creates a new agent plan for tracking multi-step work against a project, stored in TaskManager.Mcp's own tracking store. Requires a non-read-only API token.")]
     public static async Task<McpAgentPlan> CreateAgentPlan(
-        McpDbContext db,
+        McpDbContext db, AuthGrpcClient auth, IHttpContextAccessor httpContextAccessor,
         [Description("The project id (GUID) this plan is working against.")] string projectId,
         [Description("Identifier for the calling agent, e.g. \"claude-desktop\".")] string agentId,
         [Description("Identifier for the current agent session.")] string sessionId)
     {
+        await McpToolSupport.RequireToken(auth, httpContextAccessor, write: true);
+
         if (!Guid.TryParse(projectId, out var projectGuid))
             throw new McpException($"'{projectId}' is not a valid project id.");
 
@@ -41,17 +45,21 @@ public static class AgentPlanTools
     [McpServerTool(Name = "get_agent_plan", ReadOnly = true)]
     [Description("Gets an agent plan's current status and its steps.")]
     public static async Task<McpAgentPlan> GetAgentPlan(
-        McpDbContext db, [Description("The plan's id (GUID).")] string id)
+        McpDbContext db, AuthGrpcClient auth, IHttpContextAccessor httpContextAccessor,
+        [Description("The plan's id (GUID).")] string id)
     {
+        await McpToolSupport.RequireToken(auth, httpContextAccessor, write: false);
         var plan = await FindPlan(db, id);
         return plan.ToMcp();
     }
 
     [McpServerTool(Name = "complete_agent_plan")]
-    [Description("Marks an agent plan as completed.")]
+    [Description("Marks an agent plan as completed. Requires a non-read-only API token.")]
     public static async Task<McpAgentPlan> CompleteAgentPlan(
-        McpDbContext db, [Description("The plan's id (GUID).")] string id)
+        McpDbContext db, AuthGrpcClient auth, IHttpContextAccessor httpContextAccessor,
+        [Description("The plan's id (GUID).")] string id)
     {
+        await McpToolSupport.RequireToken(auth, httpContextAccessor, write: true);
         var plan = await FindPlan(db, id);
         plan.Status = AgentPlanStatus.Completed;
         plan.UpdatedAt = DateTime.UtcNow;
