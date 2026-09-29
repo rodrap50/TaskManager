@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+option csharp_namespace = "TaskManager.Grpc.Contracts";
+
+package taskmanager;
+
+import "google/protobuf/timestamp.proto";
+
+// Mirrors TaskManager.Application.Common.DTOs.EpicDto field-for-field.
+message EpicMessage {
+  string id = 1;
+  string project_id = 2;
+  string name = 3;
+  optional string description = 4;
+  optional string color_hex = 5;
+  int32 display_order = 6;
+  google.protobuf.Timestamp created_at = 7;
+  google.protobuf.Timestamp updated_at = 8;
+}
+
+message ListEpicsByProjectRequest {
+  string project_id = 1;
+}
+
+message ListEpicsByProjectResponse {
+  repeated EpicMessage epics = 1;
+}
+
+// Mirrors TaskManager.Application.Epics.Commands.CreateEpicCommand.
+message CreateEpicRequest {
+  string project_id = 1;
+  string name = 2;
+  int32 display_order = 3;
+  optional string description = 4;
+  optional string color_hex = 5;
+}
+
+// Mirrors ProjectsController's UpdateEpicRequest / UpdateEpicCommand — all fields
+// optional, unset means "leave unchanged".
+message UpdateEpicRequest {
+  string id = 1;
+  optional string name = 2;
+  optional string description = 3;
+  optional int32 display_order = 4;
+}
+
+service EpicsGrpcService {
+  rpc ListEpicsByProject(ListEpicsByProjectRequest) returns (ListEpicsByProjectResponse);
+  rpc CreateEpic(CreateEpicRequest) returns (EpicMessage);
+  rpc UpdateEpic(UpdateEpicRequest) returns (EpicMessage);
+}

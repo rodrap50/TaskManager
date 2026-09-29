@@ -97,6 +97,17 @@ export interface AllowedOriginDto {
     createdAt: string;
 }
 
+export interface ApiTokenDto {
+    id: string;
+    name: string;
+    createdAt: string;
+    createdByUserId: string;
+    revokedAt: string | null;
+    isReadOnly: boolean;
+    expiresAt: string | null;
+    rateLimitPerMinute: number | null;
+}
+
 // ---------------------------------------------------------------------------
 // Request shapes
 // ---------------------------------------------------------------------------
@@ -191,6 +202,19 @@ export interface LoginRequest {
 export interface LoginResponse {
     token: string;
     user: AppUserDto;
+}
+
+export interface CreateApiTokenRequest {
+    name: string;
+    isReadOnly?: boolean;
+    expiresAt?: string;
+    rateLimitPerMinute?: number;
+}
+
+/** The raw token is only ever returned here, at creation — never persisted, never shown again. */
+export interface CreateApiTokenResult {
+    token: string;
+    apiToken: ApiTokenDto;
 }
 
 // ---------------------------------------------------------------------------
@@ -405,3 +429,16 @@ export const addAllowedOrigin = (originUrl: string) =>
 
 export const removeAllowedOrigin = (id: string) =>
     http.delete(`/api/allowed-origins/${id}`);
+
+// ---------------------------------------------------------------------------
+// API Tokens (service-account credentials for webhooks/MCP — MCP02, MCP06)
+// ---------------------------------------------------------------------------
+
+export const getApiTokens = () =>
+    http.get<ApiTokenDto[]>('/api/api-tokens').then(r => r.data);
+
+export const createApiToken = (request: CreateApiTokenRequest) =>
+    http.post<CreateApiTokenResult>('/api/api-tokens', request).then(r => r.data);
+
+export const revokeApiToken = (id: string) =>
+    http.delete(`/api/api-tokens/${id}`);

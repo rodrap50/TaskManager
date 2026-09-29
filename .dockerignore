@@ -7,4 +7,5 @@
 .git
 .gitignore
 *.md
-docker-compose.yml
+docker-compose*.yml
+.claude

@@ -76,7 +76,10 @@ public static class MappingExtensions
         t.Name,
         t.CreatedAt,
         t.CreatedByUserId,
-        t.RevokedAt);
+        t.RevokedAt,
+        t.IsReadOnly,
+        t.ExpiresAt,
+        t.RateLimitPerMinute);
 
     public static AllowedOriginDto ToDto(this AllowedOrigin o) => new(
         o.Id,
