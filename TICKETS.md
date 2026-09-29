@@ -61,6 +61,9 @@
 **🐘 Sprint 10 — Post-Deployment: Disable Bundled Postgres Toggle**
 - [D04 — Disable Bundled Postgres Toggle](#d04-tickets--disable-bundled-postgres-toggle) — D04.1–D04.2
 
+**📦 Sprint 11 — Post-Deployment: Deployment Modes & v1.1.0 RC**
+- [D05 — Monolith & Microservices Images + v1.1.0 RC](#d05-tickets--monolith--microservices-images--v110-rc) — D05.1–D05.4
+
 **⏸ Deferred (Post-MVP)**
 - [AUTH03 — Admin: API Token Management UI](#auth03-tickets--admin-api-token-management-ui) — AUTH03.1 *(pushed post-MVP; tokens remain manageable via direct API call in the meantime)*
 - A03 — Build Webhook & Integration Manager *(pushed post-MVP; blocked by B05b, also post-MVP — not yet ticketed, see [TASKS.md](TASKS.md#a03))*
@@ -610,6 +613,100 @@ Verified live with real containers, not simulated: rebuilt the image; spun up a 
 - `.env.example` is confirmed to stay untouched by this ticket — it documents only `JWT_SECRET` (a required secret); `DISABLE_BUNDLED_POSTGRES` is an optional, non-secret compose var and belongs in `docker-compose.yml` next to its sibling `DatabaseSettings__ConnectionString` example, not in `.env.example`
 - A root `README.md` already exists (added alongside the GitHub Actions release pipeline, 2026-08-31) — it gains a short mention of `DISABLE_BUNDLED_POSTGRES` in its "Running it" section, next to or near the external-Postgres guidance
 - Verified: `docker compose config` succeeds with the new line uncommented alongside `DatabaseSettings__ConnectionString` (confirms valid YAML/env-var interpolation, not just a comment that looks right)
+
+---
+
+## D05 Tickets — Monolith & Microservices Images + v1.1.0 RC
+
+**Epic:** Monolith & Microservices Images + v1.1.0 RC — 🔄 In Progress (Sprint 11)
+
+> Per user direction (2026-09-28). TaskManager becomes deployable as a monolith (one all-in-one container) or as microservices (separate containers), and every service is published as its own Docker image. Implementation in progress on branch `feature/d05-service-images`. See [TASKS.md](TASKS.md#d05) for the epic summary.
+>
+> **Supersedes MCP07's monolith-mode layout.** MCP07.2 ran MCP as a separate compose service next to the monolith. In monolith mode, MCP now runs inside the monolith container as an s6 service. MCP07.2 also opened the bundled Postgres to the compose network (`listen_addresses='*'`, as `-h '*'` in `postgres-run.sh`, plus a `samenet` rule in `pg_hba.conf`) so that the separate MCP container could reach `McpTracking`. D05.1 reverts that change. MCP07.1's standalone `backend/TaskManager.Mcp/Dockerfile` is removed, because the root `Dockerfile`'s `mcp` target replaces it.
+>
+> **Expected merge conflict with D04.** [D04](#d04-tickets--disable-bundled-postgres-toggle) (`feature/d04-disable-bundled-postgres`, not merged yet) edits the same s6 Postgres scripts that D05.1 edits (`postgres-init.sh`, `postgres-run.sh`). The second branch to merge must resolve a conflict in those files. D04's toggle applies to monolith mode only, because microservices mode has no bundled Postgres.
+
+| Ticket | Title | Status | Blocked By |
+|---|---|---|---|
+| D05.1 | Multi-target `Dockerfile` + MCP as an s6 service | 🔍 In Review | MCP07.2 |
+| D05.2 | Compose files for both modes + README | 🔍 In Review | D05.1, MCP08.1 |
+| D05.3 | CI matrix for all four images | 🔄 In Progress | D05.1 |
+| D05.4 | Release candidate `v1.1.0-rc.1` | 🔄 In Progress | D05.2, D05.3 |
+
+---
+
+### D05.1 — Multi-Target `Dockerfile` + MCP as an s6 Service
+
+**File:** `Dockerfile`; `docker/s6-overlay/s6-rc.d/mcp/` (new); `docker/s6-overlay/scripts/mcp-run.sh` (new); `docker/s6-overlay/scripts/postgres-init.sh`; `docker/s6-overlay/scripts/postgres-run.sh`; `backend/TaskManager.Mcp/Dockerfile` (deleted)
+
+**Goal:** One root `Dockerfile` builds all four images from shared build stages, and the monolith image runs MCP as a fifth s6 service next to Postgres, the API, and Nginx.
+
+**Acceptance criteria:**
+- The root `Dockerfile` has shared build stages for the API, MCP, and frontend, and four final stages: `api`, `web`, `mcp`, and `monolith`
+- `monolith` is the last stage, so `docker build .` with no `--target` builds the monolith image
+- Each final stage copies its build output from the shared build stages. No `dotnet publish` or frontend build step appears more than once
+- `docker build --target api .`, `--target web .`, `--target mcp .`, and `--target monolith .` each succeed
+- The `api`, `web`, and `mcp` images contain only their own service. None of them contains Postgres or s6-overlay
+- Each final stage runs its service as a non-root user
+- `backend/TaskManager.Mcp/Dockerfile` is deleted, and no file in the repo references it
+- Monolith: a new `mcp` s6 longrun service runs `TaskManager.Mcp` with `TASKMANAGER_GRPC_URL` set to the API's gRPC port on localhost (`8082`) and `MCP_DB_CONNECTION_STRING` set to the `McpTracking` database on the localhost Postgres
+- Monolith: MCP listens on port 8083. The API keeps 8080 and Nginx keeps 8081. The `monolith` stage exposes 8080, 8081, and 8083 only
+- Monolith: the `mcp` service starts only after the bundled Postgres accepts connections, so it can create `McpTracking` on first boot
+- The bundled Postgres is localhost-only again: `postgres-run.sh` no longer passes `-h '*'`, and `postgres-init.sh` no longer adds the `host all all samenet` rule to `pg_hba.conf`
+- Verified live: the monolith image boots from an empty data volume, all five s6 services (`postgres-init`, `postgres`, `api`, `nginx`, `mcp`) come up, `/health` returns healthy, and MCP answers an `initialize` handshake on port 8083
+- Verified live: inside the running monolith, Postgres listens on localhost only (for example, `netstat -tln` shows `127.0.0.1:5432` and not `0.0.0.0:5432`)
+
+---
+
+### D05.2 — Compose Files for Both Modes + README
+
+**File:** `docker-compose.yml`; `docker-compose.microservices.yml` (new); root `README.md`
+
+**Goal:** A deployer can run either mode from one compose file, with published images or a local build, and the MCP integration behaves the same in both modes.
+
+**Acceptance criteria:**
+- `docker-compose.yml` has one service (the monolith). The separate `mcp` service from MCP07.2 is removed
+- `docker-compose.yml` publishes 8080 (API), 8081 (frontend), and 8083 (MCP). It does not publish 8082 (gRPC) or 5432 (Postgres)
+- `docker-compose.microservices.yml` has four services: Postgres (official `postgres:16-alpine` image), `api`, `web`, and `mcp`
+- `docker-compose.microservices.yml` publishes the same host ports for the same roles as the monolith: 8080 (`api`), 8081 (`web`), and 8083 (`mcp`). It does not publish the gRPC port or Postgres
+- Every service built from this repo, in both files, sets `image:` (the published image name) and `build:` (the matching root `Dockerfile` target). `docker compose pull` pulls the published images, and `docker compose build` builds from source
+- In both files, Postgres data and avatar uploads are on persistent volumes
+- `docker compose config` succeeds for both files
+- The root `README.md` "Running it" section covers both modes: which compose file to use, the published image names, and the published ports
+- Verified live, both modes: the stack comes up from empty volumes, `/health` returns healthy, the frontend loads on 8081, and its `/api` and `/avatars` requests reach the API
+- Verified live, both modes: MCP end-to-end test through port 8083. With a valid token, `list_projects`, `create_task`, and `create_agent_plan` succeed. With a read-only token, `create_agent_plan` fails with a clean permission-denied error and `get_agent_plan` succeeds. With a revoked token, `list_projects`, `create_task`, and `create_agent_plan` fail with a clean auth error
+- Verified live, both modes: from the host, connections to the gRPC port (8082) and to Postgres (5432) fail
+- Findings (pass or fail per item, per mode) are reported to the user before this ticket is marked Done
+
+---
+
+### D05.3 — CI Matrix for All Four Images
+
+**File:** `.github/workflows/docker-build-push.yml`
+
+**Goal:** Every CI run that publishes an image today publishes all four images, to both registries, with the same tags.
+
+**Acceptance criteria:**
+- The `build-and-push` job uses a matrix with four entries: `taskmanager` (target `monolith`), `taskmanager-api` (target `api`), `taskmanager-web` (target `web`), and `taskmanager-mcp` (target `mcp`)
+- Each entry pushes to `ghcr.io/<owner>/<image>` and `<DOCKERHUB_USERNAME>/<image>`
+- Each entry uses the existing `docker/metadata-action` tag rules without change (semver tags, `latest=auto`, `beta` and `main-<sha>` on `main`, `rc` on `-rc.` tags, `beta` on `-beta.` tags)
+- Each entry uses its own GHA cache scope (for example, `scope=<image>`), so the entries do not overwrite each other's build cache
+- The `release` job runs once per tag, and only after all four matrix entries succeed
+- Live verification happens in D05.4 (the first tag run on this workflow)
+
+---
+
+### D05.4 — Release Candidate `v1.1.0-rc.1`
+
+**Goal:** A tagged release candidate exists, with RC images for all four services in both registries and a GitHub pre-release.
+
+**Acceptance criteria:**
+- Branch `release/v1.1.0` exists and contains `main` plus MCP01–MCP08 plus D05. `git log main..release/v1.1.0` shows only those commits
+- Tag `v1.1.0-rc.1` points at the tip of `release/v1.1.0` and is pushed
+- The CI run for the tag is green: all four `build-and-push` matrix entries and the `release` job
+- Each of the four images has the tags `1.1.0-rc.1` and `rc` in both GHCR and Docker Hub. This tag does not add `latest`, `1.1`, or `1` to any image
+- A GitHub Release `v1.1.0-rc.1` exists, is marked as a pre-release, and has generated release notes
+- Verified live: both compose modes come up from the pulled RC images (no local build), `/health` returns healthy, and MCP answers an `initialize` handshake on port 8083
 
 ---
 

@@ -13,21 +13,31 @@ Self-hosted, privacy-first project management app — .NET 10 API + React/Vite f
 |---|---|
 | Backend | .NET 10, Clean Architecture (Domain → Infrastructure → Application → API), EF Core + PostgreSQL, MediatR (CQRS) |
 | Frontend | React 19 + TypeScript, Vite 6, Tailwind CSS v4 — npm workspaces monorepo, see [`frontend/README.md`](frontend/README.md) |
-| Deployment | One Dockerfile, one container: Postgres + the API + the built frontend under Nginx, supervised by [s6-overlay](https://github.com/just-containers/s6-overlay) |
+| Deployment | One multi-target Dockerfile: an all-in-one monolith (Postgres + API + frontend under Nginx + MCP server, supervised by [s6-overlay](https://github.com/just-containers/s6-overlay)), or each service as its own image |
 
 ## Running it
 
 ```bash
 cp .env.example .env
-# edit .env and set JWT_SECRET to a real value
-docker compose up -d
+# edit .env: set JWT_SECRET (and POSTGRES_PASSWORD for microservices mode)
 ```
+
+Pick a deployment mode:
+
+| Mode | Command | Containers |
+|---|---|---|
+| Monolith | `docker compose up -d` | 1 — `taskmanager` |
+| Microservices | `docker compose -f docker-compose.microservices.yml up -d` | 4 — `postgres` (official image), `taskmanager-api`, `taskmanager-web`, `taskmanager-mcp` |
+
+Both use the published images (`ghcr.io/rodrap50/...`, tag from `TASKMANAGER_TAG` in `.env`, default `latest`). Add `--build` to build from source instead.
+
+Either way, the same ports:
 
 - Frontend: `http://localhost:8081`
 - API (direct, e.g. for webhooks): `http://localhost:8080`
-- MCP server: `http://<host>:8083` — point MCP clients (Claude Desktop, Claude Code, etc.) here over Tailscale/LAN, sending an API token (Admin → MCP Tokens) in an `x-api-token` header. Its gRPC link to the API and its `McpTracking` database stay internal to the compose network.
+- MCP server: `http://<host>:8083` — point MCP clients (Claude Desktop, Claude Code, etc.) here over Tailscale/LAN, sending an API token (Admin → MCP Tokens) in an `x-api-token` header.
 
-Postgres data and avatar uploads persist under `/mnt/user/appdata/taskmanager/` (see `docker-compose.yml`).
+The API's gRPC port (8082) and Postgres are never published. Data persists under `/mnt/user/appdata/taskmanager/` (monolith) or `/mnt/user/appdata/taskmanager-ms/` (microservices).
 
 ## Releases
 

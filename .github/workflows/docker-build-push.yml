@@ -11,8 +11,17 @@ permissions:
   packages: write
 
 jobs:
+  # One image per Dockerfile target (D05): the all-in-one monolith plus each
+  # service on its own, all published with the same tags.
   build-and-push:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - { image: taskmanager,     target: monolith }
+          - { image: taskmanager-api, target: api }
+          - { image: taskmanager-web, target: web }
+          - { image: taskmanager-mcp, target: mcp }
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -41,8 +50,8 @@ jobs:
         uses: docker/metadata-action@v5
         with:
           images: |
-            ghcr.io/${{ env.OWNER_LC }}/taskmanager
-            ${{ secrets.DOCKERHUB_USERNAME }}/taskmanager
+            ghcr.io/${{ env.OWNER_LC }}/${{ matrix.image }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}
           flavor: |
             latest=auto
           tags: |
@@ -59,11 +68,13 @@ jobs:
         with:
           context: .
           file: ./Dockerfile
+          target: ${{ matrix.target }}
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          # Per-image cache scope, so the four matrix builds don't overwrite each other.
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
   release:
     needs: build-and-push

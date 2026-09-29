@@ -137,6 +137,16 @@
 
 ---
 
+## 📦 Sprint 11 — Post-Deployment: Deployment Modes & v1.1.0 RC
+
+> Per user direction (2026-09-28). TaskManager becomes deployable as a monolith or as microservices, with every service published as its own Docker image, and a first release candidate (`v1.1.0-rc.1`) is cut from `main` plus MCP01–MCP08. Implementation in progress on branch `feature/d05-service-images`. See [ROADMAP.md](ROADMAP.md#phase-12-post-deployment--deployment-modes--v110-release-candidate).
+
+| # | Epic | Status | Blocked By |
+|---|---|---|---|
+| 26 | [D05 — Monolith & Microservices Images + v1.1.0 RC](#d05) | 🔄 In Progress | #24, #25 |
+
+---
+
 ## 📋 Epic Descriptions
 
 ### U01
@@ -378,6 +388,16 @@ A single root-level `Dockerfile` builds and runs Postgres, the .NET API, and the
 Adds a `DISABLE_BUNDLED_POSTGRES` env var to the D01–D03 monolithic production image, letting deployments that always point at an external Postgres (via `DatabaseSettings__ConnectionString`) skip starting the bundled instance entirely, instead of it always initializing and running unused. Touches all three s6-overlay processes: `postgres-init` (oneshot) exits immediately without `initdb`/`createdb`; `postgres` (longrun) execs `pause` instead of Postgres so s6-rc sees a stable no-op process rather than a crash loop; `api`'s startup script skips its `pg_isready` wait loop, which today always polls the local bundled instance regardless of where the configured connection string actually points. Graduated out of the Post-MVP Backlog per user direction (2026-09-01) — see [TICKETS.md](TICKETS.md#d04-tickets--disable-bundled-postgres-toggle) for tickets.
 
 **D04.1 implementation status (2026-09-01): implementation complete, awaiting user sign-off** — epic status stays 🔲 Pending until confirmed. This turned out to be a real bug the user had hit in practice, not just the backlog item's original "resource waste" framing: pointing the container at an external Postgres left the API endlessly logging "waiting for postgres" while the external Postgres showed zero incoming connections, only starting "after a few restarts." Root cause was `api-run.sh` polling `pg_isready` against the bundled local Postgres unconditionally, regardless of what `DatabaseSettings__ConnectionString` actually pointed at. Implemented as ticketed across `postgres-init.sh`, `postgres-run.sh`, and `api-run.sh`, with one correction found during verification — the actual s6-overlay pause utility is `s6-pause`, not `pause` as the ticket's background text said. Verified live with real containers (not simulated) against both a real throwaway external Postgres and a regression pass with the toggle unset — no regression found. Full detail in [TICKETS.md](TICKETS.md#d04-tickets--disable-bundled-postgres-toggle) under D04.1.
+
+---
+
+### D05
+**Monolith & Microservices Images + v1.1.0 RC** — 🔄 In Progress
+TaskManager becomes deployable in two modes, and every service is published as its own Docker image. **Monolith mode** is one all-in-one container: Postgres, the API, Nginx with the built frontend, and `TaskManager.Mcp`, all supervised by s6-overlay. MCP is a new s6 longrun service. It reaches the API's gRPC port and Postgres over localhost, and serves MCP on port 8083. **Microservices mode** runs separate containers: the official `postgres:16-alpine` image (no custom Postgres image), `api`, `web` (Nginx plus the built frontend, proxying `/api` and `/avatars` to the API), and `mcp`. One multi-target root `Dockerfile` has shared build stages and one final stage per image: `api`, `web`, `mcp`, and `monolith` (the default, last stage). CI publishes `taskmanager` (monolith), `taskmanager-api`, `taskmanager-web`, and `taskmanager-mcp` to GHCR and Docker Hub with the same version tags. `docker-compose.yml` runs the monolith, and the new `docker-compose.microservices.yml` runs the separate services. Both can pull the published images or build from source. The epic ends with release candidate `v1.1.0-rc.1`, tagged on branch `release/v1.1.0` (`main` plus MCP01–MCP08 plus D05). Implementation in progress on branch `feature/d05-service-images`. See [TICKETS.md](TICKETS.md#d05-tickets--monolith--microservices-images--v110-rc) for tickets.
+
+**Supersedes MCP07's monolith-mode layout.** MCP07.2 ran MCP as a separate compose service next to the monolith. In monolith mode, MCP now runs inside the monolith container instead. MCP07.2 also opened the bundled Postgres to the compose network (`listen_addresses='*'`, as `-h '*'` in `postgres-run.sh`, plus a `samenet` rule in `pg_hba.conf`) so that the separate MCP container could reach `McpTracking`. D05 reverts that change, and the bundled Postgres is localhost-only again. MCP07.1's standalone `backend/TaskManager.Mcp/Dockerfile` is removed, because the root `Dockerfile`'s `mcp` target replaces it.
+
+**Expected merge conflict with D04.** D04 (`feature/d04-disable-bundled-postgres`, not merged yet) edits the same s6 Postgres scripts (`postgres-init.sh`, `postgres-run.sh`). The second branch to merge must resolve a conflict in those files. D04's toggle applies to monolith mode only, because microservices mode has no bundled Postgres.
 
 ---
 

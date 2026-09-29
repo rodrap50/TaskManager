@@ -146,6 +146,14 @@
 
 ---
 
+## Phase 12: Post-Deployment — Deployment Modes & v1.1.0 Release Candidate
+
+> Per user direction (2026-09-28). Builds on Phase 9's monolithic image and Phase 11's MCP stack. TaskManager becomes deployable as a monolith or as microservices, every service is published as its own image, and the first release candidate is cut. Supersedes MCP07's monolith-mode layout: MCP moves from a separate container into the monolith, and the bundled Postgres goes back to localhost-only. See [TASKS.md](TASKS.md#-sprint-11--post-deployment-deployment-modes--v110-rc) for the epic board and [TICKETS.md](TICKETS.md#d05-tickets--monolith--microservices-images--v110-rc) for tickets. Implementation in progress on branch `feature/d05-service-images`.
+
+- [ ] **D05: Monolith & Microservices Images + v1.1.0 RC** — One multi-target root `Dockerfile` with shared build stages and four final stages: `api`, `web`, `mcp`, and `monolith` (default). Monolith mode is one container with Postgres, the API, Nginx plus the frontend, and MCP (a new s6 longrun on port 8083, reaching gRPC and Postgres over localhost). Microservices mode runs official `postgres:16-alpine` plus separate `api`, `web`, and `mcp` containers. CI publishes `taskmanager`, `taskmanager-api`, `taskmanager-web`, and `taskmanager-mcp` to GHCR and Docker Hub with the same tags. `docker-compose.yml` (monolith) and `docker-compose.microservices.yml` can pull the images or build from source. Ends with `v1.1.0-rc.1`, tagged on `release/v1.1.0` (`main` plus MCP01–MCP08 plus D05). D04 (unmerged) edits the same s6 Postgres scripts, so expect a merge conflict there.
+
+---
+
 ## Post-MVP Backlog
 
 ### Mobile App Phase
