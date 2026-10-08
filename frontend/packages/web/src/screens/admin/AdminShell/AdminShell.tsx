@@ -1,12 +1,13 @@
 import { useState } from 'react';
-import { Users, Webhook, Gauge, Globe } from 'lucide-react';
+import { Users, Webhook, Gauge, Globe, KeyRound } from 'lucide-react';
 import { AdminGuard } from '../AdminGuard';
 import { UserManagementScreen } from '../UserManagementScreen';
 import { ProjectCriticalityScreen } from '../ProjectCriticalityScreen';
 import { AllowedOriginsScreen } from '../AllowedOriginsScreen';
+import { McpTokensScreen } from '../McpTokensScreen';
 import { useAdminShellStyles } from './AdminShell.styles';
 
-type AdminScreen = 'users' | 'projectCriticality' | 'allowedOrigins';
+type AdminScreen = 'users' | 'projectCriticality' | 'allowedOrigins' | 'mcpTokens';
 
 export function AdminShell() {
     const styles = useAdminShellStyles();
@@ -41,6 +42,14 @@ export function AdminShell() {
                         <Globe className={styles.navIcon} />
                         Allowed Origins
                     </button>
+                    <button
+                        type="button"
+                        onClick={() => setActiveScreen('mcpTokens')}
+                        className={`${styles.navLinkBase} ${activeScreen === 'mcpTokens' ? styles.navLinkActive : styles.navLinkInactive}`}
+                    >
+                        <KeyRound className={styles.navIcon} />
+                        MCP Tokens
+                    </button>
                     <span
                         className={styles.navLinkDisabled}
                         title="Webhook Manager is not yet available"
@@ -55,6 +64,7 @@ export function AdminShell() {
                     {activeScreen === 'users' && <UserManagementScreen />}
                     {activeScreen === 'projectCriticality' && <ProjectCriticalityScreen />}
                     {activeScreen === 'allowedOrigins' && <AllowedOriginsScreen />}
+                    {activeScreen === 'mcpTokens' && <McpTokensScreen />}
                 </div>
             </div>
         </AdminGuard>

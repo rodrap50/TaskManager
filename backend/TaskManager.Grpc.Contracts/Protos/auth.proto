@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+option csharp_namespace = "TaskManager.Grpc.Contracts";
+
+package taskmanager;
+
+message ValidateTokenRequest {
+}
+
+// A successful call means the caller's token is valid — a missing, invalid, revoked,
+// or expired token fails with UNAUTHENTICATED before reaching the service.
+message ValidateTokenResponse {
+  bool is_read_only = 1;
+}
+
+service AuthGrpcService {
+  rpc ValidateToken(ValidateTokenRequest) returns (ValidateTokenResponse);
+}

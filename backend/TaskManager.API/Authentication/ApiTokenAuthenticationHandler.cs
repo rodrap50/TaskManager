@@ -46,7 +46,10 @@ public class ApiTokenAuthenticationHandler : AuthenticationHandler<Authenticatio
         ApiToken? matched = null;
         foreach (var candidate in tokens)
         {
-            if (candidate.IsRevoked) continue;
+            // Expired is treated exactly like revoked/unknown (MCP02.2) — a match against
+            // an expired token never surfaces, so it falls through to the same generic
+            // failure below rather than a distinct "expired" message.
+            if (candidate.IsRevoked || candidate.IsExpired) continue;
 
             bool matches;
             try
@@ -66,14 +69,19 @@ public class ApiTokenAuthenticationHandler : AuthenticationHandler<Authenticatio
         }
 
         if (matched is null)
-            return AuthenticateResult.Fail("Invalid or revoked API token.");
+            return AuthenticateResult.Fail("Invalid, revoked, or expired API token.");
 
-        var claims = new[]
+        var claims = new List<Claim>
         {
-            new Claim(ClaimTypes.NameIdentifier, matched.CreatedByUserId.ToString()),
-            new Claim("apiTokenId", matched.Id.ToString()),
-            new Claim("apiTokenName", matched.Name),
+            new(ClaimTypes.NameIdentifier, matched.CreatedByUserId.ToString()),
+            new("apiTokenId", matched.Id.ToString()),
+            new("apiTokenName", matched.Name),
+            new("isReadOnly", matched.IsReadOnly ? "true" : "false"),
         };
+
+        if (matched.RateLimitPerMinute is { } rateLimitPerMinute)
+            claims.Add(new Claim("rateLimitPerMinute", rateLimitPerMinute.ToString()));
+
         var identity  = new ClaimsIdentity(claims, Scheme.Name);
         var principal = new ClaimsPrincipal(identity);
         var ticket    = new AuthenticationTicket(principal, Scheme.Name);

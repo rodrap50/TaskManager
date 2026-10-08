@@ -1,11 +1,19 @@
+# Monolith mode (D05): Postgres + API + frontend + MCP server in one container.
+# For one container per service instead, see docker-compose.microservices.yml.
+#
+#   docker compose pull && docker compose up -d   # published image (TASKMANAGER_TAG in .env)
+#   docker compose up -d --build                  # build from source
 services:
   app:
+    image: ${TASKMANAGER_REGISTRY:-ghcr.io/rodrap50}/taskmanager:${TASKMANAGER_TAG:-latest}
     build:
       context: .
-      dockerfile: Dockerfile
+      target: monolith
     ports:
-      - "8080:8080" # API, directly (MCP server, webhooks, out-of-band callers)
-      - "8081:8081" # Frontend (Nginx), proxies /api and /avatars to the API above
+      - "8080:8080" # API, directly (webhooks, out-of-band callers)
+      - "8081:8081" # Frontend (Nginx), proxies /api and /avatars to the API
+      - "8083:8083" # MCP endpoint (Streamable HTTP) — point MCP clients here over Tailscale/LAN
+      # Never published: 8082 (gRPC) and 5432 (Postgres) — both stay inside the container.
     environment:
       # Required — no default is baked into the image (PREP.4's Production
       # guard fails the container fast if this is missing). Set it in a
@@ -13,7 +21,7 @@ services:
       - Jwt__Secret=${JWT_SECRET:?Set JWT_SECRET in a .env file — see .env.example}
       # Optional overrides — uncomment to point at a different/external
       # Postgres instead of the one bundled in this same container. If you
-      # do, update POSTGRES_PASSWORD to match.
+      # do, update POSTGRES_PASSWORD and MCP_DB_CONNECTION_STRING to match.
       # - DatabaseSettings__ConnectionString=Host=db;Port=5432;Database=taskmanager;Username=postgres;Password=...
       # - SEQ_URL=http://seq:5341
       # - LOG_FILE_PATH=/app/api/logs/taskmanager-.log

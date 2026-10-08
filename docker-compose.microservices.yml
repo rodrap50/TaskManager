@@ -1,0 +1,70 @@
+# Microservices mode (D05): one container per service, official Postgres image.
+# For everything in a single container instead, see docker-compose.yml.
+#
+#   docker compose -f docker-compose.microservices.yml pull && docker compose -f docker-compose.microservices.yml up -d
+#   docker compose -f docker-compose.microservices.yml up -d --build   # build from source
+#
+# Uses its own data directories (taskmanager-ms/) — the monolith's bundled Postgres
+# data dir isn't interchangeable with the official image's (different owner uid).
+services:
+  postgres:
+    image: postgres:16-alpine
+    # Not published — reachable only by api and mcp over the compose network.
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in a .env file — see .env.example}
+      - POSTGRES_DB=taskmanager
+    volumes:
+      - /mnt/user/appdata/taskmanager-ms/pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  api:
+    image: ${TASKMANAGER_REGISTRY:-ghcr.io/rodrap50}/taskmanager-api:${TASKMANAGER_TAG:-latest}
+    build:
+      context: .
+      target: api
+    ports:
+      - "8080:8080" # API, directly (webhooks, out-of-band callers)
+      # Not published: 8082 (gRPC) — only the mcp service calls it.
+    environment:
+      - Jwt__Secret=${JWT_SECRET:?Set JWT_SECRET in a .env file — see .env.example}
+      - DatabaseSettings__ConnectionString=Host=postgres;Port=5432;Database=taskmanager;Username=postgres;Password=${POSTGRES_PASSWORD}
+    volumes:
+      - /mnt/user/appdata/taskmanager-ms/avatars:/app/wwwroot/avatars
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  web:
+    image: ${TASKMANAGER_REGISTRY:-ghcr.io/rodrap50}/taskmanager-web:${TASKMANAGER_TAG:-latest}
+    build:
+      context: .
+      target: web
+    ports:
+      - "8081:8081" # Frontend (Nginx), proxies /api and /avatars to the api service
+    # API_UPSTREAM defaults to http://api:8080 (set in the image).
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mcp:
+    image: ${TASKMANAGER_REGISTRY:-ghcr.io/rodrap50}/taskmanager-mcp:${TASKMANAGER_TAG:-latest}
+    build:
+      context: .
+      target: mcp
+    ports:
+      - "8083:8083" # MCP endpoint (Streamable HTTP) — point MCP clients here over Tailscale/LAN
+    environment:
+      - TASKMANAGER_GRPC_URL=http://api:8082
+      # McpTracking is created on first startup, on the same Postgres as the API.
+      - MCP_DB_CONNECTION_STRING=Host=postgres;Port=5432;Database=McpTracking;Username=postgres;Password=${POSTGRES_PASSWORD}
+    depends_on:
+      api:
+        condition: service_healthy
+    restart: unless-stopped
