@@ -2,7 +2,7 @@ name: Build & Push Docker Image
 
 on:
   push:
-    branches: [main]
+    branches: [main, 'release/v*']
     tags: ['v*.*.*']
   workflow_dispatch:
 
@@ -10,10 +10,55 @@ permissions:
   contents: write
   packages: write
 
+# Serialize runs per ref, so two quick pushes to a release branch can't pick the same rc number.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
 jobs:
+  # Works out which version tag this run publishes, if any:
+  #   tag push vX.Y.Z[-rc.N]  -> that tag
+  #   push to release/vX.Y.Z  -> creates and pushes the next vX.Y.Z-rc.N tag
+  #   push to main            -> none (rolling beta image only)
+  # The rc tag is pushed with GITHUB_TOKEN, which doesn't start another run, so this run builds it.
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.pick.outputs.tag }}
+    steps:
+      - name: Checkout
+        if: startsWith(github.ref, 'refs/heads/release/')
+        uses: actions/checkout@v4
+
+      - name: Pick version tag
+        id: pick
+        env:
+          REF: ${{ github.ref }}
+          REF_NAME: ${{ github.ref_name }}
+        run: |
+          case "$REF" in
+            refs/tags/v*)
+              echo "tag=$REF_NAME" >> "$GITHUB_OUTPUT" ;;
+            refs/heads/release/*)
+              base="${REF_NAME#release/}"
+              if ! [[ "$base" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+                echo "::error::Release branch must be named release/vX.Y.Z, got $REF_NAME"; exit 1
+              fi
+              if git ls-remote --exit-code --tags origin "refs/tags/$base" >/dev/null; then
+                echo "::error::$base is already released; start a new release branch"; exit 1
+              fi
+              last=$(git ls-remote --tags origin "refs/tags/$base-rc.*" \
+                | sed -n "s|.*refs/tags/$base-rc\.\([0-9]*\)$|\1|p" | sort -n | tail -1)
+              tag="$base-rc.$(( ${last:-0} + 1 ))"
+              git tag "$tag" "$GITHUB_SHA"
+              git push origin "refs/tags/$tag"
+              echo "tag=$tag" >> "$GITHUB_OUTPUT" ;;
+          esac
+
   # One image per Dockerfile target (D05): the all-in-one monolith plus each
   # service on its own, all published with the same tags.
   build-and-push:
+    needs: version
     runs-on: ubuntu-latest
     strategy:
       matrix:
@@ -54,14 +99,15 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/${{ matrix.image }}
           flavor: |
             latest=auto
+          # semver tags read the version from needs.version: on release-branch runs the git ref isn't a tag.
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
+            type=semver,pattern={{version}},value=${{ needs.version.outputs.tag }}
+            type=semver,pattern={{major}}.{{minor}},value=${{ needs.version.outputs.tag }}
+            type=semver,pattern={{major}},value=${{ needs.version.outputs.tag }}
             type=raw,value=beta,enable=${{ github.ref == 'refs/heads/main' }}
             type=sha,prefix=main-,enable=${{ github.ref == 'refs/heads/main' }}
-            type=raw,value=rc,enable=${{ contains(github.ref_name, '-rc.') }}
-            type=raw,value=beta,enable=${{ contains(github.ref_name, '-beta.') }}
+            type=raw,value=rc,enable=${{ contains(needs.version.outputs.tag, '-rc.') }}
+            type=raw,value=beta,enable=${{ contains(needs.version.outputs.tag, '-beta.') }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
@@ -77,8 +123,8 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.image }}
 
   release:
-    needs: build-and-push
-    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [version, build-and-push]
+    if: needs.version.outputs.tag != ''
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -87,5 +133,6 @@ jobs:
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ needs.version.outputs.tag }}
           generate_release_notes: true
-          prerelease: ${{ contains(github.ref_name, '-rc.') || contains(github.ref_name, '-beta.') }}
+          prerelease: ${{ contains(needs.version.outputs.tag, '-rc.') || contains(needs.version.outputs.tag, '-beta.') }}

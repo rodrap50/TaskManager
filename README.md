@@ -45,6 +45,8 @@ The API's gRPC port (8082) and Postgres are never published. Data persists under
 
 Version tags (`vX.Y.Z`) trigger a build, push images to both GHCR and Docker Hub, and publish a GitHub Release. `vX.Y.Z-rc.N`/`vX.Y.Z-beta.N` tags publish pre-release images/releases; plain pushes to `main` publish a rolling `beta` image for testing between releases.
 
+Each push to a `release/vX.Y.Z` branch tags the next release candidate automatically (`vX.Y.Z-rc.1`, `-rc.2`, …) and publishes it the same way, including the `rc` image tag. To ship, tag the final commit `vX.Y.Z` yourself; after that the branch refuses further rc pushes.
+
 ## Project docs
 
 Planning and architecture live in [`MISSION.md`](MISSION.md), [`ROADMAP.md`](ROADMAP.md), [`TASKS.md`](TASKS.md), and [`TICKETS.md`](TICKETS.md).
