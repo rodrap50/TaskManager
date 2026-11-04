@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { ListChecks, Plus, Users, Layers } from 'lucide-react';
+import { Archive, Eye, EyeOff, ListChecks, Plus, Users, Layers } from 'lucide-react';
 import type { ProjectTaskDto } from '@taskmanager/shared';
 import { useProject } from '../../contexts/ProjectContext';
 import { useProjectDetail } from '../../hooks/useProjectDetail';
@@ -15,15 +15,24 @@ import { TaskDetailPanel } from '../../features/tasks/TaskDetailPanel';
 import { CreateTaskModal } from '../../features/tasks/CreateTaskModal';
 import { MembersPanel } from '../../features/project/MembersPanel';
 import { EpicsPanel } from '../../features/project/EpicsPanel';
+import { ArchivedPanel } from '../../features/project/ArchivedPanel';
 import { ViewToggle, type ViewMode } from './ViewToggle';
 import { useBoardScreenStyles } from './BoardScreen.styles';
 
 const STORAGE_KEY = 'tm:viewMode';
+const SHOW_ALL_DONE_KEY = 'tm:showAllDone';
+// ponytail: fixed for every project; becomes a per-project setting on the U06 settings page.
+const HIDE_DONE_AFTER_DAYS = 14;
 const DEFAULT_ACCENT = '#991b1b'; // primary-800, used when a project has no stored color
 
 function loadViewMode(): ViewMode {
     const saved = localStorage.getItem(STORAGE_KEY);
     return saved === 'list' ? 'list' : 'kanban';
+}
+
+/** Done for longer than HIDE_DONE_AFTER_DAYS. A task just dragged to Done has no completedAt yet, so it stays visible. */
+function isOldDone(task: ProjectTaskDto, cutoff: number): boolean {
+    return task.status === 'Done' && task.completedAt !== null && Date.parse(task.completedAt) < cutoff;
 }
 
 export function BoardScreen() {
@@ -33,6 +42,8 @@ export function BoardScreen() {
     const [showCreateTask, setShowCreateTask] = useState(false);
     const [showMembersPanel, setShowMembersPanel] = useState(false);
     const [showEpicsPanel, setShowEpicsPanel] = useState(false);
+    const [showArchivedPanel, setShowArchivedPanel] = useState(false);
+    const [showAllDone, setShowAllDone] = useState(() => localStorage.getItem(SHOW_ALL_DONE_KEY) === 'true');
     const styles = useBoardScreenStyles();
 
     const { data: project } = useProjectDetail(selectedProjectId);
@@ -49,6 +60,15 @@ export function BoardScreen() {
     useEffect(() => {
         localStorage.setItem(STORAGE_KEY, viewMode);
     }, [viewMode]);
+
+    useEffect(() => {
+        localStorage.setItem(SHOW_ALL_DONE_KEY, String(showAllDone));
+    }, [showAllDone]);
+
+    const doneCutoff = Date.now() - HIDE_DONE_AFTER_DAYS * 24 * 60 * 60 * 1000;
+    const oldDoneCount = tasks.filter(t => isOldDone(t, doneCutoff)).length;
+    const visibleTasks = showAllDone ? tasks : tasks.filter(t => !isOldDone(t, doneCutoff));
+    const hiddenDoneCount = tasks.length - visibleTasks.length;
 
     return (
         <div className={styles.root}>
@@ -82,6 +102,26 @@ export function BoardScreen() {
                             <span className={styles.buttonLabel}>Epics</span>
                         </button>
                     )}
+                    {oldDoneCount > 0 && (
+                        <button
+                            type="button"
+                            onClick={() => setShowAllDone(v => !v)}
+                            className={styles.membersButton}
+                            aria-pressed={showAllDone}
+                            title={showAllDone
+                                ? `Hide tasks done more than ${HIDE_DONE_AFTER_DAYS} days ago`
+                                : `Show ${oldDoneCount} tasks done more than ${HIDE_DONE_AFTER_DAYS} days ago`}
+                        >
+                            {showAllDone ? <EyeOff className={styles.membersButtonIcon} /> : <Eye className={styles.membersButtonIcon} />}
+                            <span className={styles.buttonLabel}>{showAllDone ? 'Hide old done' : 'Show all done'}</span>
+                        </button>
+                    )}
+                    {selectedProjectId && (
+                        <button type="button" onClick={() => setShowArchivedPanel(true)} className={styles.membersButton} aria-label="Archived tasks" title="Archived tasks">
+                            <Archive className={styles.membersButtonIcon} />
+                            <span className={styles.buttonLabel}>Archived</span>
+                        </button>
+                    )}
                     {!isDailyTask && (
                         <ViewToggle mode={viewMode} onChange={setViewMode} />
                     )}
@@ -105,13 +145,13 @@ export function BoardScreen() {
             )}
 
             {!loading && tasks.length > 0 && isDailyTask && (
-                <TodoList tasks={tasks} onTaskClick={setSelectedTask} />
+                <TodoList tasks={visibleTasks} onTaskClick={setSelectedTask} />
             )}
             {!loading && tasks.length > 0 && !isDailyTask && viewMode === 'kanban' && (
-                <KanbanBoard tasks={tasks} phases={phases} epics={epics} users={users} onTaskClick={setSelectedTask} />
+                <KanbanBoard tasks={visibleTasks} phases={phases} epics={epics} users={users} hiddenDoneCount={hiddenDoneCount} onTaskClick={setSelectedTask} />
             )}
             {!loading && tasks.length > 0 && !isDailyTask && viewMode === 'list' && (
-                <ListView tasks={tasks} phases={phases} epics={epics} users={users} onTaskClick={setSelectedTask} />
+                <ListView tasks={visibleTasks} phases={phases} epics={epics} users={users} onTaskClick={setSelectedTask} />
             )}
 
             {selectedTask && (
@@ -143,6 +183,15 @@ export function BoardScreen() {
                     usersLoading={loadingUsers}
                     onClose={() => setShowMembersPanel(false)}
                     onMembershipChanged={refetchMembers}
+                />
+            )}
+
+            {showArchivedPanel && selectedProjectId && (
+                <ArchivedPanel
+                    projectId={selectedProjectId}
+                    olderThanDays={HIDE_DONE_AFTER_DAYS}
+                    onClose={() => setShowArchivedPanel(false)}
+                    onTasksChanged={refetchTasks}
                 />
             )}
 

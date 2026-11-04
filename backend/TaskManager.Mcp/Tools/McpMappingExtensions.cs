@@ -17,7 +17,8 @@ public record McpPhase(
 public record McpTask(
     string Id, string ProjectId, string? PhaseId, string? EpicId, string? AssignedUserId,
     string Title, string? Description, string Status, string Priority, int WeightedScore,
-    DateTime? DueDate, double? EstimatedHours, bool IsCompleted, DateTime CreatedAt, DateTime? UpdatedAt);
+    DateTime? DueDate, double? EstimatedHours, bool IsCompleted, DateTime CreatedAt, DateTime? UpdatedAt,
+    DateTime? CompletedAt, bool IsArchived, DateTime? ArchivedAt);
 
 /// <summary>Flattens gRPC contract messages into plain, JSON-friendly shapes for MCP tool output —
 /// proto3's optional-scalar Has* tracking and Timestamp structs aren't pleasant for an LLM to read.</summary>
@@ -40,5 +41,6 @@ internal static class McpMappingExtensions
         t.Id, t.ProjectId, t.HasPhaseId ? t.PhaseId : null, t.HasEpicId ? t.EpicId : null,
         t.HasAssignedUserId ? t.AssignedUserId : null, t.Title, t.HasDescription ? t.Description : null,
         t.Status.ToString(), t.Priority.ToString(), t.WeightedScore, t.DueDate?.ToDateTime(),
-        t.HasEstimatedHours ? t.EstimatedHours : null, t.IsCompleted, t.CreatedAt.ToDateTime(), t.UpdatedAt?.ToDateTime());
+        t.HasEstimatedHours ? t.EstimatedHours : null, t.IsCompleted, t.CreatedAt.ToDateTime(), t.UpdatedAt?.ToDateTime(),
+        t.CompletedAt?.ToDateTime(), t.IsArchived, t.ArchivedAt?.ToDateTime());
 }

@@ -7,9 +7,19 @@ public class TasksGrpcClient(GrpcChannel channel)
 {
     private readonly TasksGrpcService.TasksGrpcServiceClient _client = new(channel);
 
-    public async Task<ListTasksByProjectResponse> ListTasksByProject(string token, string projectId) =>
-        await _client.ListTasksByProjectAsync(
-            new ListTasksByProjectRequest { ProjectId = projectId }, GrpcAuth.WithToken(token));
+    public async Task<ListTasksByProjectResponse> ListTasksByProject(
+        string token, string projectId, bool archived = false, int? completedWithinDays = null)
+    {
+        var request = new ListTasksByProjectRequest { ProjectId = projectId, Archived = archived };
+        if (completedWithinDays is { } days) request.CompletedWithinDays = days;
+        return await _client.ListTasksByProjectAsync(request, GrpcAuth.WithToken(token));
+    }
+
+    public async Task<ProjectTaskMessage> ArchiveTask(string token, string id) =>
+        await _client.ArchiveTaskAsync(new ArchiveTaskRequest { Id = id }, GrpcAuth.WithToken(token));
+
+    public async Task<ProjectTaskMessage> RestoreTask(string token, string id) =>
+        await _client.RestoreTaskAsync(new RestoreTaskRequest { Id = id }, GrpcAuth.WithToken(token));
 
     public async Task<ProjectTaskMessage> GetTask(string token, string id) =>
         await _client.GetTaskAsync(new GetTaskRequest { Id = id }, GrpcAuth.WithToken(token));

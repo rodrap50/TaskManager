@@ -83,9 +83,12 @@ internal static class GrpcMappingExtensions
             Priority        = System.Enum.Parse<TaskPriority>(dto.Priority).ToGrpc(),
             WeightedScore   = dto.WeightedScore,
             IsCompleted     = dto.IsCompleted,
+            IsArchived      = dto.IsArchived,
             CreatedAt       = dto.CreatedAt.ToUtcTimestamp(),
         };
 
+        if (dto.CompletedAt is { } completedAt) message.CompletedAt = completedAt.ToUtcTimestamp();
+        if (dto.ArchivedAt is { } archivedAt) message.ArchivedAt = archivedAt.ToUtcTimestamp();
         if (dto.PhaseId is { } phaseId) message.PhaseId = phaseId.ToString();
         if (dto.EpicId is { } epicId) message.EpicId = epicId.ToString();
         if (dto.AssignedUserId is { } assignedUserId) message.AssignedUserId = assignedUserId.ToString();

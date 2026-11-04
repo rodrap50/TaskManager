@@ -171,6 +171,27 @@ public sealed class ProjectTask
     public bool IsCompleted => Status is TaskStatus.Done or TaskStatus.Cancelled;
 
     /// <summary>
+    /// UTC time the task last entered <see cref="TaskStatus.Done"/> or
+    /// <see cref="TaskStatus.Cancelled"/>; <see langword="null"/> while it is open.
+    /// Set and cleared by <see cref="Transition"/>. Drives hiding old Done tasks on the
+    /// board and automatic archiving.
+    /// </summary>
+    public DateTime? CompletedAt { get; private set; }
+
+    // -------------------------------------------------------------------------
+    // Archival
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Archived tasks are hidden from the board, list and default task queries but keep
+    /// all their data. Only completed tasks can be archived — see <see cref="Archive"/>.
+    /// </summary>
+    public bool IsArchived { get; private set; }
+
+    /// <summary>UTC time the task was archived; <see langword="null"/> when not archived.</summary>
+    public DateTime? ArchivedAt { get; private set; }
+
+    /// <summary>
     /// Computed priority score (1–10), blending <see cref="Priority"/>, cast
     /// <see cref="TaskVote"/>s, and the parent project's <c>CriticalityScore</c> via
     /// <see cref="WeightedScoreCalculator"/> (PRI01). Persisted rather than computed
@@ -362,12 +383,17 @@ public sealed class ProjectTask
     /// <param name="newStatus">The target workflow state.</param>
     /// <exception cref="InvalidOperationException">
     ///   Thrown when attempting to transition a completed/cancelled task to a state other
-    ///   than <see cref="TaskStatus.Backlog"/>.
+    ///   than <see cref="TaskStatus.Backlog"/>, or when the task is archived.
     /// </exception>
     public void Transition(TaskStatus newStatus)
     {
         // Idempotent no-op
         if (Status == newStatus) return;
+
+        // An archived task is off the board, so reopening it in place would leave it hidden.
+        if (IsArchived)
+            throw new InvalidOperationException(
+                $"Task '{Id}' is archived. Restore it before changing its status.");
 
         // Terminal state guard: completed or cancelled tasks can only be explicitly reopened
         if (IsCompleted && newStatus != TaskStatus.Backlog)
@@ -378,6 +404,38 @@ public sealed class ProjectTask
         }
 
         Status = newStatus;
+        CompletedAt = IsCompleted ? DateTime.UtcNow : null;
+        Audit = Audit.Touch();
+    }
+
+    /// <summary>
+    /// Archives this task, hiding it from the board and default queries. Idempotent.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">
+    ///   Thrown when the task is not <see cref="TaskStatus.Done"/> or <see cref="TaskStatus.Cancelled"/>.
+    /// </exception>
+    public void Archive()
+    {
+        if (IsArchived) return;
+
+        if (!IsCompleted)
+            throw new InvalidOperationException(
+                $"Task '{Id}' is '{Status}'. Only Done or Cancelled tasks can be archived.");
+
+        IsArchived = true;
+        ArchivedAt = DateTime.UtcNow;
+        Audit = Audit.Touch();
+    }
+
+    /// <summary>
+    /// Restores an archived task. Its status is unchanged. Idempotent.
+    /// </summary>
+    public void Restore()
+    {
+        if (!IsArchived) return;
+
+        IsArchived = false;
+        ArchivedAt = null;
         Audit = Audit.Touch();
     }
 

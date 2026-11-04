@@ -1,4 +1,5 @@
 using MediatR;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskManager.Application.Common.DTOs;
 using TaskManager.Application.Common.Interfaces;
@@ -15,18 +16,34 @@ public class TasksController : ControllerBase
 {
     private readonly IMediator _mediator;
     private readonly ICurrentUserService _currentUser;
+    private readonly ILogger<TasksController> _logger;
 
-    public TasksController(IMediator mediator, ICurrentUserService currentUser)
+    public TasksController(IMediator mediator, ICurrentUserService currentUser, ILogger<TasksController> logger)
     {
         _mediator    = mediator;
         _currentUser = currentUser;
+        _logger      = logger;
     }
 
     [HttpGet("project/{projectId:guid}")]
-    public async Task<ActionResult<List<ProjectTaskDto>>> GetByProject(Guid projectId, CancellationToken ct)
+    public async Task<ActionResult<List<ProjectTaskDto>>> GetByProject(
+        Guid projectId,
+        [FromQuery] bool archived = false,
+        [FromQuery] int? completedWithinDays = null,
+        CancellationToken ct = default)
     {
-        var result = await _mediator.Send(new GetTasksByProjectQuery(projectId), ct);
+        var result = await _mediator.Send(new GetTasksByProjectQuery(projectId, archived, completedWithinDays), ct);
         return Ok(result);
+    }
+
+    [HttpPost("project/{projectId:guid}/archive-completed")]
+    public async Task<ActionResult<ArchiveCompletedResponse>> ArchiveCompleted(
+        Guid projectId,
+        [FromBody] ArchiveCompletedRequest request,
+        CancellationToken ct)
+    {
+        var count = await _mediator.Send(new ArchiveCompletedTasksCommand(projectId, request.OlderThanDays), ct);
+        return Ok(new ArchiveCompletedResponse(count));
     }
 
     [HttpGet("{id:guid}")]
@@ -80,6 +97,37 @@ public class TasksController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    [HttpPost("{id:guid}/archive")]
+    public async Task<ActionResult<ProjectTaskDto>> Archive(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ArchiveTaskCommand(id), ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    [HttpPost("{id:guid}/restore")]
+    public async Task<ActionResult<ProjectTaskDto>> Restore(Guid id, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new ArchiveTaskCommand(id, Restore: true), ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
+    // Human admins only: API tokens carry no role claim, so they get 403 here — and there is
+    // deliberately no gRPC/MCP equivalent.
+    [HttpDelete("{id:guid}")]
+    [Authorize(Roles = "Admin")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken ct)
+    {
+        var deleted = await _mediator.Send(new DeleteTaskCommand(id), ct);
+        if (deleted is null) return NotFound();
+
+        // ponytail: the structured log is the audit trail; move to an audit table once one exists.
+        _logger.LogWarning(
+            "AUDIT task deleted: {TaskId} \"{TaskTitle}\" (project {ProjectId}, status {Status}) by user {UserId}",
+            deleted.Id, deleted.Title, deleted.ProjectId, deleted.Status, _currentUser.UserId);
+
+        return NoContent();
+    }
+
     [HttpPut("{id:guid}/votes")]
     public async Task<ActionResult<ProjectTaskDto>> CastVote(
         Guid id,
@@ -109,3 +157,7 @@ public record UpdateTaskRequest(
 public record TransitionRequest(TaskStatus NewStatus);
 
 public record CastVoteRequest(int VoteValue);
+
+public record ArchiveCompletedRequest(int OlderThanDays);
+
+public record ArchiveCompletedResponse(int ArchivedCount);

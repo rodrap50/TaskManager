@@ -37,6 +37,8 @@ Either way, the same ports:
 - API (direct, e.g. for webhooks): `http://localhost:8080`
 - MCP server: `http://<host>:8083` — point MCP clients (Claude Desktop, Claude Code, etc.) here over Tailscale/LAN, sending an API token (Admin → MCP Tokens) in an `x-api-token` header.
 
+To archive Done and Cancelled tasks automatically, set `TaskArchiving__AutoArchiveAfterDays` on the API (commented example in both compose files). It is off by default; you can always archive from the board's **Archived** panel.
+
 The API's gRPC port (8082) and Postgres are never published. Data persists under `/mnt/user/appdata/taskmanager/` (monolith) or `/mnt/user/appdata/taskmanager-ms/` (microservices).
 
 ## Releases

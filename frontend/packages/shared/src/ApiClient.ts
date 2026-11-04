@@ -56,6 +56,9 @@ export interface ProjectTaskDto {
     externalMetadata: Record<string, string>;
     createdAt: string;
     updatedAt: string | null;
+    completedAt: string | null; // when it last became Done/Cancelled; null while open
+    isArchived: boolean;
+    archivedAt: string | null;
 }
 
 export interface ProjectPhaseDto {
@@ -338,8 +341,8 @@ export const removeProjectMember = (projectId: string, userId: string) =>
 // Tasks
 // ---------------------------------------------------------------------------
 
-export const getTasksByProject = (projectId: string) =>
-    http.get<ProjectTaskDto[]>(`/api/tasks/project/${projectId}`).then(r => r.data);
+export const getTasksByProject = (projectId: string, options?: { archived?: boolean }) =>
+    http.get<ProjectTaskDto[]>(`/api/tasks/project/${projectId}`, { params: options }).then(r => r.data);
 
 export const getTaskById = (id: string) =>
     http.get<ProjectTaskDto>(`/api/tasks/${id}`).then(r => r.data);
@@ -352,6 +355,21 @@ export const updateTask = (id: string, body: UpdateTaskRequest) =>
 
 export const transitionTask = (id: string, newStatus: TaskStatus) =>
     http.post<ProjectTaskDto>(`/api/tasks/${id}/transition`, { newStatus }).then(r => r.data);
+
+export const archiveTask = (id: string) =>
+    http.post<ProjectTaskDto>(`/api/tasks/${id}/archive`).then(r => r.data);
+
+export const restoreTask = (id: string) =>
+    http.post<ProjectTaskDto>(`/api/tasks/${id}/restore`).then(r => r.data);
+
+/** Archives every Done/Cancelled task in the project completed more than `olderThanDays` days ago. */
+export const archiveCompletedTasks = (projectId: string, olderThanDays: number) =>
+    http.post<{ archivedCount: number }>(`/api/tasks/project/${projectId}/archive-completed`, { olderThanDays })
+        .then(r => r.data);
+
+/** Permanent. Admin-only on the server. */
+export const deleteTask = (id: string) =>
+    http.delete(`/api/tasks/${id}`);
 
 export const castVote = (taskId: string, voteValue: number) =>
     http.put<ProjectTaskDto>(`/api/tasks/${taskId}/votes`, { voteValue }).then(r => r.data);
