@@ -1,12 +1,13 @@
 export const useBoardScreenStyles = () => ({
     root: 'flex h-full w-full flex-col items-center',
-    header: 'flex w-full max-w-[95vw] items-center justify-between gap-2 px-3 pt-4 pb-2 sm:gap-3 sm:px-4',
+    header: 'flex w-full max-w-[95vw] flex-wrap items-center justify-between gap-2 px-3 pt-4 pb-2 sm:gap-3 sm:px-4',
     titleWrap: 'inline-block min-w-0 rounded-br-xl border-b-2 border-r-2 px-3 py-1',
     projectName: 'truncate text-base font-semibold text-text sm:text-lg',
-    headerActions: 'flex shrink-0 items-center gap-2 sm:gap-3',
-    // Four controls plus the project name do not fit across a phone, so the
+    headerActions: 'ml-auto flex shrink-0 items-center gap-2 sm:gap-3',
+    // The controls plus the project name do not fit across a phone, so the
     // action buttons collapse to their icons below `sm` (each keeps an
-    // aria-label in BoardScreen.tsx, since the visible text is what disappears).
+    // aria-label in BoardScreen.tsx, since the visible text is what disappears),
+    // and the header wraps them onto their own row when even that is too wide.
     newTaskButton: 'flex min-h-9 items-center gap-1.5 rounded-lg bg-primary-800 dark:bg-primary-700 px-2.5 py-1.5 text-sm font-medium ' +
         'text-text-inverted transition-colors hover:bg-primary-700 dark:hover:bg-primary-800 sm:px-3',
     newTaskButtonIcon: 'h-3.5 w-3.5',

@@ -11,14 +11,39 @@ namespace TaskManager.Mcp.Tools;
 public static class TaskTools
 {
     [McpServerTool(Name = "list_tasks", ReadOnly = true)]
-    [Description("Lists all tasks for a project.")]
+    [Description("Lists the tasks for a project. Archived tasks are excluded unless archived is true.")]
     public static async Task<IReadOnlyList<McpTask>> ListTasks(
         TasksGrpcClient client, IHttpContextAccessor httpContextAccessor,
-        [Description("The parent project's id (GUID).")] string projectId)
+        [Description("The parent project's id (GUID).")] string projectId,
+        [Description("true to list only archived tasks instead of active ones.")] bool archived = false,
+        [Description("Optional: drop Done/Cancelled tasks completed more than this many days ago.")] int? completedWithinDays = null)
     {
         var token = McpToolSupport.GetToken(httpContextAccessor);
-        var response = await McpToolSupport.Execute(() => client.ListTasksByProject(token, projectId));
+        var response = await McpToolSupport.Execute(
+            () => client.ListTasksByProject(token, projectId, archived, completedWithinDays));
         return response.Tasks.Select(t => t.ToMcp()).ToList();
+    }
+
+    [McpServerTool(Name = "archive_task")]
+    [Description("Archives a Done or Cancelled task, hiding it from the board and from list_tasks. Requires a non-read-only API token.")]
+    public static async Task<McpTask> ArchiveTask(
+        TasksGrpcClient client, IHttpContextAccessor httpContextAccessor,
+        [Description("The task's id (GUID).")] string id)
+    {
+        var token = McpToolSupport.GetToken(httpContextAccessor);
+        var task = await McpToolSupport.Execute(() => client.ArchiveTask(token, id));
+        return task.ToMcp();
+    }
+
+    [McpServerTool(Name = "restore_task")]
+    [Description("Restores an archived task to the board. Its status is unchanged. Requires a non-read-only API token.")]
+    public static async Task<McpTask> RestoreTask(
+        TasksGrpcClient client, IHttpContextAccessor httpContextAccessor,
+        [Description("The task's id (GUID).")] string id)
+    {
+        var token = McpToolSupport.GetToken(httpContextAccessor);
+        var task = await McpToolSupport.Execute(() => client.RestoreTask(token, id));
+        return task.ToMcp();
     }
 
     [McpServerTool(Name = "get_task", ReadOnly = true)]

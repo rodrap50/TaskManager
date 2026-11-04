@@ -23,7 +23,7 @@ public sealed class WriteGuardMiddleware
     private static readonly HashSet<string> MutatingGrpcMethods = new(StringComparer.Ordinal)
     {
         "CreateEpic", "UpdateEpic",
-        "CreateTask", "UpdateTask", "TransitionTask",
+        "CreateTask", "UpdateTask", "TransitionTask", "ArchiveTask", "RestoreTask",
     };
 
     private const string ReadOnlyMessage = "This token is read-only and cannot perform mutating operations.";

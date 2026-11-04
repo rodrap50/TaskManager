@@ -26,6 +26,7 @@ export const useKanbanBoardStyles = () => ({
     header: 'flex items-center justify-between border-b border-primary-700 px-3 py-2.5 shadow-[0_4px_12px_-2px_rgba(185,28,28,0.5)] [clip-path:inset(0_0_-20px_0)]',
     headerLabel: 'text-sm font-semibold text-text',
     countBadge: 'rounded-full bg-surface-overlay px-1.5 py-0.5 text-[11px] font-medium text-text-muted',
+    hiddenCount: 'ml-1 text-[11px] text-text-muted',
     taskList: 'flex flex-1 flex-col gap-2 overflow-y-auto px-2 py-3',
     taskWrapBase: 'transition-opacity',
     taskDragging: 'opacity-40',

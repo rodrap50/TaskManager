@@ -58,7 +58,10 @@ public static class MappingExtensions
         t.IsCompleted,
         t.ExternalMetadata,
         t.Audit.CreatedAt,
-        t.Audit.UpdatedAt);
+        t.Audit.UpdatedAt,
+        t.CompletedAt,
+        t.IsArchived,
+        t.ArchivedAt);
 
     public static AppUserDto ToDto(this AppUser u) => new(
         u.Id,

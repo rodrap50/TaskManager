@@ -25,6 +25,8 @@ services:
       # - DatabaseSettings__ConnectionString=Host=db;Port=5432;Database=taskmanager;Username=postgres;Password=...
       # - SEQ_URL=http://seq:5341
       # - LOG_FILE_PATH=/app/api/logs/taskmanager-.log
+      # Archive Done/Cancelled tasks automatically N days after they close (unset = off).
+      # - TaskArchiving__AutoArchiveAfterDays=30
     volumes:
       - /mnt/user/appdata/taskmanager/pgdata:/var/lib/postgresql/data
       - /mnt/user/appdata/taskmanager/avatars:/app/api/wwwroot/avatars

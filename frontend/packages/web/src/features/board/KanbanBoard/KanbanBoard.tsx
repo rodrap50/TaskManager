@@ -24,10 +24,12 @@ interface Props {
     phases: ProjectPhaseDto[];
     epics: EpicDto[];
     users: AppUserDto[];
+    /** Old Done tasks the board filtered out before passing `tasks`; shown next to the Done count. */
+    hiddenDoneCount?: number;
     onTaskClick?: (task: ProjectTaskDto) => void;
 }
 
-export function KanbanBoard({ tasks, epics, users, onTaskClick }: Props) {
+export function KanbanBoard({ tasks, epics, users, hiddenDoneCount = 0, onTaskClick }: Props) {
     const styles = useKanbanBoardStyles();
     const [localTasks, setLocalTasks] = useState<ProjectTaskDto[]>(tasks);
     const [draggedId, setDraggedId]   = useState<string | null>(null);
@@ -136,8 +138,13 @@ export function KanbanBoard({ tasks, epics, users, onTaskClick }: Props) {
                         >
                             <div className={styles.header}>
                                 <h3 className={styles.headerLabel}>{col.label}</h3>
-                                <span className={styles.countBadge}>
-                                    {colTasks.length}
+                                <span>
+                                    <span className={styles.countBadge}>
+                                        {colTasks.length}
+                                    </span>
+                                    {col.status === 'Done' && hiddenDoneCount > 0 && (
+                                        <span className={styles.hiddenCount}>· {hiddenDoneCount} hidden</span>
+                                    )}
                                 </span>
                             </div>
 

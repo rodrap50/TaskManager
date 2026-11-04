@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Pencil, X } from 'lucide-react';
+import { Archive, Pencil, Trash2, X } from 'lucide-react';
 import type { ProjectTaskDto, ProjectPhaseDto, EpicDto, AppUserDto, TaskStatus } from '@taskmanager/shared';
-import { transitionTask, updateTask, resolveAssetUrl } from '@taskmanager/shared';
+import { archiveTask, deleteTask, getErrorMessage, transitionTask, updateTask, resolveAssetUrl } from '@taskmanager/shared';
 import { AssigneeAvatar } from '@taskmanager/ui';
 import { useAuth } from '../../App/AuthContext';
 import { useTaskDetailPanelStyles } from './TaskDetailPanel.styles';
@@ -57,6 +57,9 @@ export function TaskDetailPanel({ task, users, members, phases, epics, projectSc
     const [isEditing, setIsEditing] = useState(false);
     const [saving, setSaving]       = useState(false);
     const [saveError, setSaveError] = useState<string | null>(null);
+    const [confirmingDelete, setConfirmingDelete] = useState(false);
+    const [actionBusy, setActionBusy] = useState(false);
+    const [actionError, setActionError] = useState<string | null>(null);
 
     // The last-known-persisted values. Seeded from the `task` prop, but re-synced after every
     // successful Save — the prop itself stays stale until the panel closes and BoardScreen refetches,
@@ -147,7 +150,22 @@ export function TaskDetailPanel({ task, users, members, phases, epics, projectSc
         }
     };
 
+    // Archive and Delete both remove the task from the board, so on success the panel closes.
+    const runAction = async (action: () => Promise<unknown>, failure: string) => {
+        setActionBusy(true);
+        setActionError(null);
+        try {
+            await action();
+            handleClose();
+        } catch (e) {
+            setActionError(getErrorMessage(e, failure));
+            setActionBusy(false);
+        }
+    };
+
     const canSave = title.trim().length > 0 && !saving;
+    const canArchive = saved.status === 'Done' || saved.status === 'Cancelled';
+    const canDelete = user?.isAdmin === true;
     const phaseName = phaseId ? phases.find(ph => ph.id === phaseId)?.name ?? 'None' : 'None';
     const epicName  = epicId ? epics.find(e => e.id === epicId)?.name ?? 'None' : 'None';
     const showEpics = projectScope === 'Project';
@@ -341,6 +359,52 @@ export function TaskDetailPanel({ task, users, members, phases, epics, projectSc
                         </p>
                     )}
                 </div>
+
+                {!isEditing && (canArchive || canDelete) && (
+                    <div className={styles.footer}>
+                        {actionError && <p className={styles.fieldError}>{actionError}</p>}
+                        {confirmingDelete ? (
+                            <>
+                                <p className={styles.confirmText}>
+                                    Delete "{saved.title}" permanently? This can't be undone. To hide it instead, archive it.
+                                </p>
+                                <div className={styles.footerButtons}>
+                                    <button type="button" onClick={() => setConfirmingDelete(false)} disabled={actionBusy} className={styles.cancelButton}>
+                                        Cancel
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => void runAction(() => deleteTask(task.id), 'Failed to delete task')}
+                                        disabled={actionBusy}
+                                        className={styles.dangerButton}
+                                    >
+                                        {actionBusy ? 'Deleting…' : 'Delete permanently'}
+                                    </button>
+                                </div>
+                            </>
+                        ) : (
+                            <div className={styles.footerButtons}>
+                                {canArchive && (
+                                    <button
+                                        type="button"
+                                        onClick={() => void runAction(() => archiveTask(task.id), 'Failed to archive task')}
+                                        disabled={actionBusy}
+                                        className={styles.actionButton}
+                                    >
+                                        <Archive className={styles.actionIcon} />
+                                        {actionBusy ? 'Archiving…' : 'Archive'}
+                                    </button>
+                                )}
+                                {canDelete && (
+                                    <button type="button" onClick={() => setConfirmingDelete(true)} disabled={actionBusy} className={styles.dangerButton}>
+                                        <Trash2 className={styles.actionIcon} />
+                                        Delete
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
 
                 {isEditing && (
                     <div className={styles.footer}>

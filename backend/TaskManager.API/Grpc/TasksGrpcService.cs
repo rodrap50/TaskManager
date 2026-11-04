@@ -20,7 +20,9 @@ public class TasksGrpcService : Contracts.TasksGrpcService.TasksGrpcServiceBase
         if (!Guid.TryParse(request.ProjectId, out var projectId))
             throw new RpcException(new Status(StatusCode.InvalidArgument, "ProjectId must be a valid GUID."));
 
-        var tasks = await _mediator.Send(new GetTasksByProjectQuery(projectId), context.CancellationToken);
+        var query = new GetTasksByProjectQuery(
+            projectId, request.Archived, request.HasCompletedWithinDays ? request.CompletedWithinDays : null);
+        var tasks = await GrpcExceptionMapping.ExecuteAsync(() => _mediator.Send(query, context.CancellationToken));
 
         var response = new Contracts.ListTasksByProjectResponse();
         response.Tasks.AddRange(tasks.Select(t => t.ToMessage()));
@@ -120,6 +122,28 @@ public class TasksGrpcService : Contracts.TasksGrpcService.TasksGrpcServiceBase
         var task = await GrpcExceptionMapping.ExecuteAsync(() => _mediator.Send(command, context.CancellationToken));
         if (task is null)
             throw new RpcException(new Status(StatusCode.NotFound, $"Task {request.Id} was not found."));
+
+        return task.ToMessage();
+    }
+
+    public override Task<Contracts.ProjectTaskMessage> ArchiveTask(
+        Contracts.ArchiveTaskRequest request, ServerCallContext context)
+        => SendArchive(request.Id, restore: false, context);
+
+    public override Task<Contracts.ProjectTaskMessage> RestoreTask(
+        Contracts.RestoreTaskRequest request, ServerCallContext context)
+        => SendArchive(request.Id, restore: true, context);
+
+    private async Task<Contracts.ProjectTaskMessage> SendArchive(string rawId, bool restore, ServerCallContext context)
+    {
+        if (!Guid.TryParse(rawId, out var id))
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Id must be a valid GUID."));
+
+        var command = new ArchiveTaskCommand(id, restore);
+
+        var task = await GrpcExceptionMapping.ExecuteAsync(() => _mediator.Send(command, context.CancellationToken));
+        if (task is null)
+            throw new RpcException(new Status(StatusCode.NotFound, $"Task {rawId} was not found."));
 
         return task.ToMessage();
     }

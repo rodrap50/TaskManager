@@ -23,4 +23,7 @@ public record ProjectTaskDto(
     bool IsCompleted,
     Dictionary<string, string> ExternalMetadata,
     DateTime CreatedAt,
-    DateTime? UpdatedAt);
+    DateTime? UpdatedAt,
+    DateTime? CompletedAt,
+    bool IsArchived,
+    DateTime? ArchivedAt);

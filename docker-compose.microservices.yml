@@ -33,6 +33,8 @@ services:
     environment:
       - Jwt__Secret=${JWT_SECRET:?Set JWT_SECRET in a .env file — see .env.example}
       - DatabaseSettings__ConnectionString=Host=postgres;Port=5432;Database=taskmanager;Username=postgres;Password=${POSTGRES_PASSWORD}
+      # Archive Done/Cancelled tasks automatically N days after they close (unset = off).
+      # - TaskArchiving__AutoArchiveAfterDays=30
     volumes:
       - /mnt/user/appdata/taskmanager-ms/avatars:/app/wwwroot/avatars
     depends_on:

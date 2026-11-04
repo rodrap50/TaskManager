@@ -268,8 +268,14 @@ namespace TaskManager.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<DateTime?>("ArchivedAt")
+                        .HasColumnType("timestamp with time zone");
+
                     b.Property<Guid?>("AssignedUserId")
                         .HasColumnType("uuid");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
 
                     b.Property<string>("Description")
                         .HasMaxLength(4000)
@@ -288,6 +294,9 @@ namespace TaskManager.Infrastructure.Migrations
                     b.Property<string>("ExternalMetadata")
                         .IsRequired()
                         .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("boolean");
 
                     b.Property<Guid?>("PhaseId")
                         .HasColumnType("uuid");

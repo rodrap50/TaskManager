@@ -4,7 +4,20 @@ namespace TaskManager.Application.Common.Interfaces;
 
 public interface IProjectTaskRepository : IRepository<ProjectTask>
 {
-    Task<IReadOnlyList<ProjectTask>> GetByProjectAsync(Guid projectId, CancellationToken ct = default);
+    /// <summary>
+    /// Tasks in a project. <paramref name="archived"/> selects archived tasks only, or (default)
+    /// non-archived only. <paramref name="completedWithinDays"/>, when set, drops completed tasks
+    /// whose <see cref="ProjectTask.CompletedAt"/> is older than that many days; open tasks are kept.
+    /// </summary>
+    Task<IReadOnlyList<ProjectTask>> GetByProjectAsync(
+        Guid projectId, bool archived = false, int? completedWithinDays = null, CancellationToken ct = default);
+
+    /// <summary>
+    /// Change-tracked, non-archived, completed tasks whose <see cref="ProjectTask.CompletedAt"/>
+    /// is before <paramref name="cutoff"/> — the candidates for bulk/automatic archiving.
+    /// <paramref name="projectId"/> <see langword="null"/> means every project.
+    /// </summary>
+    Task<IReadOnlyList<ProjectTask>> GetCompletedBeforeAsync(Guid? projectId, DateTime cutoff, CancellationToken ct = default);
     Task<IReadOnlyList<ProjectTask>> GetByAssigneeAsync(Guid userId, CancellationToken ct = default);
 
     /// <summary>

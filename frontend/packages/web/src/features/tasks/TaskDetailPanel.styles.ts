@@ -50,4 +50,12 @@ export const useTaskDetailPanelStyles = () => ({
         'transition-colors hover:bg-surface hover:text-text sm:min-h-0',
     saveButton: 'min-h-11 flex-1 rounded-lg bg-primary-800 py-2 text-sm font-medium text-text-inverted ' +
         'transition-colors hover:bg-primary-700 disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0',
+
+    // Archive / Delete row, shown when not editing.
+    actionButton: 'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-border py-2 text-sm font-medium text-text-muted ' +
+        'transition-colors hover:bg-surface hover:text-text disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0',
+    dangerButton: 'flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-lg border border-primary-700 py-2 text-sm font-medium text-primary-700 ' +
+        'transition-colors hover:bg-primary-800 hover:text-text-inverted disabled:cursor-not-allowed disabled:opacity-50 sm:min-h-0',
+    actionIcon: 'h-3.5 w-3.5',
+    confirmText: 'mb-3 text-sm text-text',
 });

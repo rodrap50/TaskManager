@@ -17,11 +17,27 @@ public class ProjectTaskRepository : GenericRepository<ProjectTask>, IProjectTas
             .Include(t => t.Votes)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
 
-    public async Task<IReadOnlyList<ProjectTask>> GetByProjectAsync(Guid projectId, CancellationToken ct = default)
-        => await Context.Tasks
+    public async Task<IReadOnlyList<ProjectTask>> GetByProjectAsync(
+        Guid projectId, bool archived = false, int? completedWithinDays = null, CancellationToken ct = default)
+    {
+        var query = Context.Tasks
             .Include(t => t.Votes)
-            .Where(t => t.ProjectId == projectId)
-            .AsNoTracking()
+            .Where(t => t.ProjectId == projectId && t.IsArchived == archived);
+
+        if (completedWithinDays is { } days)
+        {
+            var cutoff = DateTime.UtcNow.AddDays(-days);
+            query = query.Where(t => t.CompletedAt == null || t.CompletedAt >= cutoff);
+        }
+
+        return await query.AsNoTracking().ToListAsync(ct);
+    }
+
+    public async Task<IReadOnlyList<ProjectTask>> GetCompletedBeforeAsync(
+        Guid? projectId, DateTime cutoff, CancellationToken ct = default)
+        => await Context.Tasks
+            .Where(t => !t.IsArchived && t.CompletedAt != null && t.CompletedAt < cutoff)
+            .Where(t => projectId == null || t.ProjectId == projectId)
             .ToListAsync(ct);
 
     public async Task<IReadOnlyList<ProjectTask>> GetByAssigneeAsync(Guid userId, CancellationToken ct = default)
