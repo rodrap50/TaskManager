@@ -18,6 +18,12 @@ public interface IProjectTaskRepository : IRepository<ProjectTask>
     /// <paramref name="projectId"/> <see langword="null"/> means every project.
     /// </summary>
     Task<IReadOnlyList<ProjectTask>> GetCompletedBeforeAsync(Guid? projectId, DateTime cutoff, CancellationToken ct = default);
+
+    /// <summary>
+    /// The task with display ID <c>{projectKey}-{number}</c>, or <see langword="null"/>.
+    /// <paramref name="projectKey"/> must already be uppercase.
+    /// </summary>
+    Task<ProjectTask?> GetByDisplayIdAsync(string projectKey, int number, CancellationToken ct = default);
     Task<IReadOnlyList<ProjectTask>> GetByAssigneeAsync(Guid userId, CancellationToken ct = default);
 
     /// <summary>

@@ -4,6 +4,7 @@ using TaskManager.Application.Common.Interfaces;
 using TaskManager.Application.Common.Mappings;
 using TaskManager.Domain.Entities;
 using TaskManager.Domain.Enums;
+using TaskManager.Domain.Services;
 
 namespace TaskManager.Application.Projects.Commands;
 
@@ -29,10 +30,14 @@ public class CreateProjectCommandHandler : IRequestHandler<CreateProjectCommand,
     {
         var ownerId = _currentUser.UserId;
 
+        // ponytail: two creates racing for the same new key fail one on the unique index (500); retry on conflict if that ever shows up.
+        var key = ProjectKeys.PickUnique(request.Name, await _uow.Projects.GetKeysAsync(cancellationToken));
+
         var project = new Project(
             name: request.Name,
             scope: request.Scope,
             createdByUserId: ownerId,
+            key: key,
             description: request.Description,
             colorHex: request.ColorHex,
             dueDate: request.DueDate);

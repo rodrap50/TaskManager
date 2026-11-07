@@ -47,6 +47,9 @@ message ProjectTaskMessage {
   google.protobuf.Timestamp completed_at = 19;
   bool is_archived = 20;
   google.protobuf.Timestamp archived_at = 21;
+  int32 number = 22;
+  // Human-readable ticket ID, e.g. "TSKM-001". Unset only if the project wasn't loaded.
+  optional string display_id = 23;
 }
 
 message ListTasksByProjectRequest {
@@ -62,6 +65,7 @@ message ListTasksByProjectResponse {
 }
 
 message GetTaskRequest {
+  // A task GUID or a display ID such as "TSKM-001".
   string id = 1;
 }
 

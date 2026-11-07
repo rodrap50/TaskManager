@@ -87,6 +87,7 @@ public static class WebApplicationExtensions
         var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
 
         await db.Database.MigrateAsync();
+        await DataSeeder.BackfillProjectKeysAsync(db, logger);
         await DataSeeder.SeedAsync(db, logger);
 
         if (app.Environment.IsDevelopment())

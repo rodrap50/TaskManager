@@ -22,6 +22,7 @@ export function resolveAssetUrl(path: string | null | undefined): string | null 
 
 export interface ProjectDto {
     id: string;
+    key: string; // ticket ID prefix, e.g. 'TSKM'
     name: string;
     description: string | null;
     scope: string; // 'Project' | 'DailyTask'
@@ -39,6 +40,8 @@ export interface ProjectDto {
 
 export interface ProjectTaskDto {
     id: string;
+    number: number;
+    displayId: string | null; // e.g. 'TSKM-001'
     projectId: string;
     phaseId: string | null;
     epicId: string | null;

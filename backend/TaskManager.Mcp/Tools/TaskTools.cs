@@ -47,10 +47,10 @@ public static class TaskTools
     }
 
     [McpServerTool(Name = "get_task", ReadOnly = true)]
-    [Description("Gets a single task by id.")]
+    [Description("Gets a single task by its id (GUID) or its display ID, such as TSKM-001.")]
     public static async Task<McpTask> GetTask(
         TasksGrpcClient client, IHttpContextAccessor httpContextAccessor,
-        [Description("The task's id (GUID).")] string id)
+        [Description("The task's id (GUID) or display ID (for example TSKM-001).")] string id)
     {
         var token = McpToolSupport.GetToken(httpContextAccessor);
         var task = await McpToolSupport.Execute(() => client.GetTask(token, id));

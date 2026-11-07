@@ -50,6 +50,12 @@ public sealed class ProjectTask
     /// </summary>
     public Guid Id { get; private set; }
 
+    /// <summary>
+    /// Sequential number within the project (the "001" in "TSKM-001"), starting at 1.
+    /// Assigned at construction and never changed or reused.
+    /// </summary>
+    public int Number { get; private set; }
+
     // -------------------------------------------------------------------------
     // Relationships
     // -------------------------------------------------------------------------
@@ -253,6 +259,7 @@ public sealed class ProjectTask
     /// <param name="projectId">
     ///   ID of the owning <see cref="Project"/>. Must not be <see cref="Guid.Empty"/>.
     /// </param>
+    /// <param name="number">The task's <see cref="Number"/>, from the project's counter. Must be 1 or more.</param>
     /// <param name="title">Task title. Must not be null or whitespace.</param>
     /// <param name="priority">
     ///   Urgency classification. Defaults to <see cref="TaskPriority.Medium"/>.
@@ -274,6 +281,7 @@ public sealed class ProjectTask
     /// </exception>
     public ProjectTask(
         Guid projectId,
+        int number,
         string title,
         TaskPriority priority = TaskPriority.Medium,
         string? description = null,
@@ -285,6 +293,9 @@ public sealed class ProjectTask
         if (projectId == Guid.Empty)
             throw new ArgumentException("ProjectId must be a valid, non-empty GUID.", nameof(projectId));
 
+        if (number < 1)
+            throw new ArgumentException("Task number must be 1 or more.", nameof(number));
+
         if (string.IsNullOrWhiteSpace(title))
             throw new ArgumentException("Task title must not be null or whitespace.", nameof(title));
 
@@ -292,6 +303,7 @@ public sealed class ProjectTask
             throw new ArgumentException("EstimatedHours must be a positive value when specified.", nameof(estimatedHours));
 
         Id               = Guid.NewGuid();
+        Number           = number;
         ProjectId        = projectId;
         PhaseId          = phaseId;
         AssignedUserId   = assignedUserId == Guid.Empty ? null : assignedUserId;

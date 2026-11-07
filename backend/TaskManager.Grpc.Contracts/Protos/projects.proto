@@ -31,6 +31,8 @@ message ProjectMessage {
   repeated ProjectPhaseMessage phases = 12;
   repeated EpicMessage epics = 13;
   repeated ProjectTaskMessage tasks = 14;
+  // Ticket ID prefix, e.g. "TSKM".
+  string key = 15;
 }
 
 message ListProjectsRequest {

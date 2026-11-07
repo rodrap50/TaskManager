@@ -54,6 +54,7 @@ function TodoRow({ task, onToggle, onClick }: RowProps) {
                 >
                     {done && <Check className={styles.checkIcon} />}
                 </button>
+                {task.displayId && <span className={styles.displayId}>{task.displayId}</span>}
                 <span className={done ? styles.titleDone : styles.title}>{task.title}</span>
                 <div className={styles.metaRow}>
                     <PriorityBadge priority={task.priority} />

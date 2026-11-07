@@ -31,4 +31,18 @@ public class ProjectRepository : GenericRepository<Project>, IProjectRepository
 
     public async Task<bool> IsMemberAsync(Guid projectId, Guid userId, CancellationToken ct = default)
         => await Context.ProjectMembers.AnyAsync(m => m.ProjectId == projectId && m.UserId == userId, ct);
+
+    public async Task<IReadOnlySet<string>> GetKeysAsync(CancellationToken ct = default)
+        => (await Context.Projects.Select(p => p.Key).ToListAsync(ct)).ToHashSet();
+
+    // UPDATE ... RETURNING takes a row lock, so concurrent callers queue and each gets its own number.
+    public async Task<int> AllocateTaskNumberAsync(Guid projectId, CancellationToken ct = default)
+        => (await Context.Database
+                .SqlQuery<int>($"""
+                    UPDATE "Projects" SET "NextTaskNumber" = "NextTaskNumber" + 1
+                    WHERE "Id" = {projectId}
+                    RETURNING "NextTaskNumber" - 1 AS "Value"
+                    """)
+                .ToListAsync(ct))
+            .Single();
 }

@@ -12,6 +12,7 @@ export const useTodoListStyles = () => ({
         'sm:h-5 sm:w-5',
     checkboxChecked: 'border-primary-700 bg-primary-700',
     checkIcon: 'h-3.5 w-3.5 text-white',
+    displayId: 'shrink-0 font-mono text-xs text-text-muted',
     title: 'min-w-0 flex-1 truncate text-sm font-medium text-text',
     titleDone: 'min-w-0 flex-1 truncate text-sm font-medium text-text-muted line-through',
     metaRow: 'flex flex-shrink-0 items-center gap-2',

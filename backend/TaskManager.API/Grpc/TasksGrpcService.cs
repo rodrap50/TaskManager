@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.AspNetCore.Authorization;
 using TaskManager.Application.Tasks.Commands;
 using TaskManager.Application.Tasks.Queries;
+using TaskManager.Domain.Services;
 using Contracts = TaskManager.Grpc.Contracts;
 
 namespace TaskManager.API.Grpc;
@@ -32,10 +33,15 @@ public class TasksGrpcService : Contracts.TasksGrpcService.TasksGrpcServiceBase
     public override async Task<Contracts.ProjectTaskMessage> GetTask(
         Contracts.GetTaskRequest request, ServerCallContext context)
     {
-        if (!Guid.TryParse(request.Id, out var id))
-            throw new RpcException(new Status(StatusCode.InvalidArgument, "Id must be a valid GUID."));
+        IRequest<Application.Common.DTOs.ProjectTaskDto?> query;
+        if (Guid.TryParse(request.Id, out var id))
+            query = new GetTaskByIdQuery(id);
+        else if (ProjectKeys.TryParseDisplayId(request.Id, out _, out _))
+            query = new GetTaskByDisplayIdQuery(request.Id);
+        else
+            throw new RpcException(new Status(StatusCode.InvalidArgument, "Id must be a GUID or a display ID such as TSKM-001."));
 
-        var task = await _mediator.Send(new GetTaskByIdQuery(id), context.CancellationToken);
+        var task = await _mediator.Send(query, context.CancellationToken);
         if (task is null)
             throw new RpcException(new Status(StatusCode.NotFound, $"Task {request.Id} was not found."));
 

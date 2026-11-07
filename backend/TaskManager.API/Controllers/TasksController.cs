@@ -53,6 +53,14 @@ public class TasksController : ControllerBase
         return result is null ? NotFound() : Ok(result);
     }
 
+    // Any non-GUID single segment, e.g. GET /api/tasks/TSKM-001 (the {id:guid} route wins for GUIDs).
+    [HttpGet("{displayId}")]
+    public async Task<ActionResult<ProjectTaskDto>> GetByDisplayId(string displayId, CancellationToken ct)
+    {
+        var result = await _mediator.Send(new GetTaskByDisplayIdQuery(displayId), ct);
+        return result is null ? NotFound() : Ok(result);
+    }
+
     [HttpPost]
     public async Task<ActionResult<ProjectTaskDto>> CreateTask(
         [FromBody] CreateTaskCommand command, CancellationToken ct)
