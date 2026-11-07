@@ -2,6 +2,7 @@ namespace TaskManager.Application.Common.DTOs;
 
 public record ProjectDto(
     Guid Id,
+    string Key,
     string Name,
     string? Description,
     string Scope,

@@ -1,5 +1,6 @@
 using TaskManager.Application.Common.DTOs;
 using TaskManager.Domain.Entities;
+using TaskManager.Domain.Services;
 
 namespace TaskManager.Application.Common.Mappings;
 
@@ -7,6 +8,7 @@ public static class MappingExtensions
 {
     public static ProjectDto ToDto(this Project p) => new(
         p.Id,
+        p.Key,
         p.Name,
         p.Description,
         p.Scope.ToString(),
@@ -19,7 +21,7 @@ public static class MappingExtensions
         p.Audit.UpdatedAt,
         p.Phases.Select(ph => ph.ToDto()).ToList(),
         p.Epics.Select(e => e.ToDto()).ToList(),
-        p.Tasks.Select(t => t.ToDto()).ToList());
+        p.Tasks.Select(t => t.ToDto(p.Key)).ToList());
 
     public static ProjectPhaseDto ToDto(this ProjectPhase ph) => new(
         ph.Id,
@@ -40,8 +42,11 @@ public static class MappingExtensions
         e.Audit.CreatedAt,
         e.Audit.UpdatedAt);
 
-    public static ProjectTaskDto ToDto(this ProjectTask t) => new(
+    /// <param name="projectKey">The owning project's key when the caller has it; otherwise read from <c>t.Project</c>.</param>
+    public static ProjectTaskDto ToDto(this ProjectTask t, string? projectKey = null) => new(
         t.Id,
+        t.Number,
+        (projectKey ?? t.Project?.Key) is { Length: > 0 } key ? ProjectKeys.FormatDisplayId(key, t.Number) : null,
         t.ProjectId,
         t.PhaseId,
         t.EpicId,

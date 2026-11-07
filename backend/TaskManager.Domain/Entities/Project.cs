@@ -100,6 +100,23 @@ public sealed class Project
     public const int DefaultCriticalityScore = 5;
 
     // -------------------------------------------------------------------------
+    // Ticket IDs
+    // -------------------------------------------------------------------------
+
+    /// <summary>
+    /// Prefix of this project's task display IDs (the "TSKM" in "TSKM-001"): 2–6 uppercase
+    /// letters or digits, unique across projects. See <see cref="Services.ProjectKeys"/>.
+    /// </summary>
+    public string Key { get; private set; }
+
+    /// <summary>
+    /// The <see cref="ProjectTask.Number"/> the next new task gets. Only goes up, so numbers
+    /// are never reused. Incremented atomically in the database
+    /// (<c>IProjectRepository.AllocateTaskNumberAsync</c>), never in memory.
+    /// </summary>
+    public int NextTaskNumber { get; private set; }
+
+    // -------------------------------------------------------------------------
     // Ownership
     // -------------------------------------------------------------------------
 
@@ -175,6 +192,7 @@ public sealed class Project
     /// <param name="createdByUserId">
     ///   ID of the <see cref="AppUser"/> who is creating this project.
     /// </param>
+    /// <param name="key">Ticket ID prefix; see <see cref="Key"/>.</param>
     /// <param name="description">Optional longer description.</param>
     /// <param name="colorHex">
     ///   Optional six-character hex color code (without <c>#</c>).
@@ -190,6 +208,7 @@ public sealed class Project
         string name,
         ProjectScope scope,
         Guid createdByUserId,
+        string key,
         string? description = null,
         string? colorHex = null,
         DateTime? dueDate = null)
@@ -202,6 +221,8 @@ public sealed class Project
 
         Id                = Guid.NewGuid();
         Name              = name.Trim();
+        Key               = ValidateKey(key);
+        NextTaskNumber    = 1;
         Scope             = scope;
         CreatedByUserId   = createdByUserId;
         Description       = description?.Trim();
@@ -223,6 +244,7 @@ public sealed class Project
     private Project()
     {
         Name   = string.Empty;
+        Key    = string.Empty;
         Audit  = AuditInfo.CreateNew();
         _phases = [];
         _epics  = [];
@@ -249,6 +271,22 @@ public sealed class Project
         Name = newName.Trim();
         Audit = Audit.Touch();
     }
+
+    /// <summary>
+    /// Sets the ticket ID prefix. Used to backfill projects created before keys existed;
+    /// the caller is responsible for uniqueness.
+    /// </summary>
+    /// <exception cref="ArgumentException">Thrown when the key isn't 2–6 uppercase letters or digits.</exception>
+    public void AssignKey(string key)
+    {
+        Key = ValidateKey(key);
+        Audit = Audit.Touch();
+    }
+
+    private static string ValidateKey(string key) =>
+        Services.ProjectKeys.IsValid(key)
+            ? key
+            : throw new ArgumentException("Project key must be 2–6 uppercase letters or digits.", nameof(key));
 
     /// <summary>
     /// Replaces the project description and updates the audit trail.

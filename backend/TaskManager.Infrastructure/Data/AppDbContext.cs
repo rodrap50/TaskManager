@@ -2,6 +2,7 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
 using TaskManager.Domain.Entities;
+using TaskManager.Domain.Services;
 
 namespace TaskManager.Infrastructure.Data;
 
@@ -86,6 +87,12 @@ public class AppDbContext : DbContext
             // rows backfilled by the AddTaskVoteAndCriticalityScore migration land on the same
             // neutral midpoint as a newly-constructed Project, rather than an invalid 0.
             b.Property(p => p.CriticalityScore).HasDefaultValue(Project.DefaultCriticalityScore);
+
+            // Projects that predate ticket IDs start with an empty Key until the startup
+            // backfill (DataSeeder.BackfillProjectKeysAsync) assigns one; the filter keeps
+            // those placeholders out of the unique index.
+            b.Property(p => p.Key).HasMaxLength(ProjectKeys.MaxLength).IsRequired();
+            b.HasIndex(p => p.Key).IsUnique().HasFilter("\"Key\" <> ''");
 
             b.OwnsOne(p => p.Audit, audit =>
             {
@@ -180,6 +187,9 @@ public class AppDbContext : DbContext
             b.Property(t => t.Title).HasMaxLength(300).IsRequired();
             b.Property(t => t.Description).HasMaxLength(4000);
             b.Property(t => t.EstimatedHours).HasPrecision(6, 2);
+
+            // Backstop for the per-project counter: two tasks can never share a number.
+            b.HasIndex(t => new { t.ProjectId, t.Number }).IsUnique();
 
             // Dictionary<string, string> stored as PostgreSQL JSONB for flexible external
             // tool metadata (Home Assistant entity IDs, MQTT topics, webhook references).

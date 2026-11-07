@@ -195,10 +195,18 @@ namespace TaskManager.Infrastructure.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(6)
+                        .HasColumnType("character varying(6)");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("character varying(200)");
+
+                    b.Property<int>("NextTaskNumber")
+                        .HasColumnType("integer");
 
                     b.Property<int>("Scope")
                         .HasColumnType("integer");
@@ -206,6 +214,10 @@ namespace TaskManager.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("CreatedByUserId");
+
+                    b.HasIndex("Key")
+                        .IsUnique()
+                        .HasFilter("\"Key\" <> ''");
 
                     b.ToTable("Projects");
                 });
@@ -298,6 +310,9 @@ namespace TaskManager.Infrastructure.Migrations
                     b.Property<bool>("IsArchived")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
                     b.Property<Guid?>("PhaseId")
                         .HasColumnType("uuid");
 
@@ -329,9 +344,10 @@ namespace TaskManager.Infrastructure.Migrations
 
                     b.HasIndex("PhaseId");
 
-                    b.HasIndex("ProjectId");
-
                     b.HasIndex("SecondaryAssigneeId");
+
+                    b.HasIndex("ProjectId", "Number")
+                        .IsUnique();
 
                     b.ToTable("Tasks");
                 });

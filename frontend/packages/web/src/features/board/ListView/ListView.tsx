@@ -29,6 +29,7 @@ function TaskRow({ task, phaseName, epicName, epicColorHex, assignee, onClick }:
     return (
         <button type="button" onClick={onClick} className={styles.row}>
             <StatusIndicator status={task.status} />
+            {task.displayId && <span className={styles.displayId}>{task.displayId}</span>}
             <span className={styles.title}>{task.title}</span>
             <div className={styles.metaRow}>
                 <PriorityBadge priority={task.priority} />

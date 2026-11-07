@@ -177,6 +177,7 @@ export function TaskDetailPanel({ task, users, members, phases, epics, projectSc
             <div className={styles.backdrop} onClick={handleClose} />
             <div className={styles.panel}>
                 <div className={styles.header}>
+                    {task.displayId && <span className={styles.displayId}>{task.displayId}</span>}
                     {isEditing ? (
                         <input
                             autoFocus

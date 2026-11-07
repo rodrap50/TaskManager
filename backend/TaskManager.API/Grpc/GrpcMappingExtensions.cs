@@ -17,6 +17,7 @@ internal static class GrpcMappingExtensions
         var message = new Contracts.ProjectMessage
         {
             Id                = dto.Id.ToString(),
+            Key               = dto.Key,
             Name              = dto.Name,
             Scope             = System.Enum.Parse<ProjectScope>(dto.Scope).ToGrpc(),
             IsArchived        = dto.IsArchived,
@@ -77,6 +78,7 @@ internal static class GrpcMappingExtensions
         var message = new Contracts.ProjectTaskMessage
         {
             Id              = dto.Id.ToString(),
+            Number          = dto.Number,
             ProjectId       = dto.ProjectId.ToString(),
             Title           = dto.Title,
             Status          = System.Enum.Parse<DomainTaskStatus>(dto.Status).ToGrpc(),
@@ -87,6 +89,7 @@ internal static class GrpcMappingExtensions
             CreatedAt       = dto.CreatedAt.ToUtcTimestamp(),
         };
 
+        if (dto.DisplayId is not null) message.DisplayId = dto.DisplayId;
         if (dto.CompletedAt is { } completedAt) message.CompletedAt = completedAt.ToUtcTimestamp();
         if (dto.ArchivedAt is { } archivedAt) message.ArchivedAt = archivedAt.ToUtcTimestamp();
         if (dto.PhaseId is { } phaseId) message.PhaseId = phaseId.ToString();

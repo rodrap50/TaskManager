@@ -19,4 +19,15 @@ public interface IProjectRepository : IRepository<Project>
     /// the full <see cref="Project.Members"/> collection.
     /// </summary>
     Task<bool> IsMemberAsync(Guid projectId, Guid userId, CancellationToken ct = default);
+
+    /// <summary>Every project's <see cref="Project.Key"/>, for picking a new unique one.</summary>
+    Task<IReadOnlySet<string>> GetKeysAsync(CancellationToken ct = default);
+
+    /// <summary>
+    /// Takes the project's next task number and advances <see cref="Project.NextTaskNumber"/>
+    /// in one atomic database statement, so concurrent creates never get the same number.
+    /// It runs before the task insert, so a create that then fails leaves a gap; numbers are
+    /// never reused.
+    /// </summary>
+    Task<int> AllocateTaskNumberAsync(Guid projectId, CancellationToken ct = default);
 }

@@ -11,6 +11,7 @@ export const useTaskDetailPanelStyles = () => ({
     panel: 'fixed inset-y-0 right-0 z-[60] flex w-[480px] max-w-full flex-col border-l border-border bg-surface-raised shadow-2xl ' +
         'animate-[drawerIn_220ms_ease-out] motion-reduce:animate-none',
     header: 'flex items-start justify-between gap-3 border-b border-border px-4 py-4 sm:px-6',
+    displayId: 'shrink-0 pt-0.5 font-mono text-sm text-text-muted',
     titleText: 'flex-1 truncate text-base font-semibold text-text',
     titleInput: 'flex-1 rounded-lg border border-primary-700 bg-surface px-2 py-1 text-base font-semibold text-text ' +
         'focus:outline-none',

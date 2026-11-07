@@ -29,8 +29,11 @@ public class CreateTaskCommandHandler : IRequestHandler<CreateTaskCommand, Proje
         var project = await _uow.Projects.GetByIdAsync(request.ProjectId, cancellationToken);
         if (project is null) return null;
 
+        var number = await _uow.Projects.AllocateTaskNumberAsync(request.ProjectId, cancellationToken);
+
         var task = new ProjectTask(
             projectId:      request.ProjectId,
+            number:         number,
             title:          request.Title,
             priority:       request.Priority,
             description:    request.Description,

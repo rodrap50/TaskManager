@@ -3,7 +3,7 @@ using TaskManager.Grpc.Contracts;
 namespace TaskManager.Mcp.Tools;
 
 public record McpProject(
-    string Id, string Name, string? Description, string Scope, string? ColorHex,
+    string Id, string Key, string Name, string? Description, string Scope, string? ColorHex,
     DateTime? DueDate, bool IsArchived, int CriticalityScore, DateTime CreatedAt, DateTime? UpdatedAt);
 
 public record McpEpic(
@@ -15,7 +15,7 @@ public record McpPhase(
     int DisplayOrder, DateTime CreatedAt, DateTime? UpdatedAt);
 
 public record McpTask(
-    string Id, string ProjectId, string? PhaseId, string? EpicId, string? AssignedUserId,
+    string Id, string? DisplayId, string ProjectId, string? PhaseId, string? EpicId, string? AssignedUserId,
     string Title, string? Description, string Status, string Priority, int WeightedScore,
     DateTime? DueDate, double? EstimatedHours, bool IsCompleted, DateTime CreatedAt, DateTime? UpdatedAt,
     DateTime? CompletedAt, bool IsArchived, DateTime? ArchivedAt);
@@ -25,7 +25,7 @@ public record McpTask(
 internal static class McpMappingExtensions
 {
     public static McpProject ToMcp(this ProjectMessage p) => new(
-        p.Id, p.Name, p.HasDescription ? p.Description : null, p.Scope.ToString(),
+        p.Id, p.Key, p.Name, p.HasDescription ? p.Description : null, p.Scope.ToString(),
         p.HasColorHex ? p.ColorHex : null, p.DueDate?.ToDateTime(), p.IsArchived,
         p.CriticalityScore, p.CreatedAt.ToDateTime(), p.UpdatedAt?.ToDateTime());
 
@@ -38,7 +38,7 @@ internal static class McpMappingExtensions
         p.DisplayOrder, p.CreatedAt.ToDateTime(), p.UpdatedAt?.ToDateTime());
 
     public static McpTask ToMcp(this ProjectTaskMessage t) => new(
-        t.Id, t.ProjectId, t.HasPhaseId ? t.PhaseId : null, t.HasEpicId ? t.EpicId : null,
+        t.Id, t.HasDisplayId ? t.DisplayId : null, t.ProjectId, t.HasPhaseId ? t.PhaseId : null, t.HasEpicId ? t.EpicId : null,
         t.HasAssignedUserId ? t.AssignedUserId : null, t.Title, t.HasDescription ? t.Description : null,
         t.Status.ToString(), t.Priority.ToString(), t.WeightedScore, t.DueDate?.ToDateTime(),
         t.HasEstimatedHours ? t.EstimatedHours : null, t.IsCompleted, t.CreatedAt.ToDateTime(), t.UpdatedAt?.ToDateTime(),

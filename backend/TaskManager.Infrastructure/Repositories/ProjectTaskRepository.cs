@@ -12,16 +12,25 @@ public class ProjectTaskRepository : GenericRepository<ProjectTask>, IProjectTas
     // Overridden (rather than inheriting GenericRepository's FindAsync-based lookup) so
     // Votes is always eagerly loaded — RecalculateWeightedScore reads it in-memory, and a
     // plain FindAsync never populates a collection navigation on a fresh context instance.
+    // Project is loaded for the task's display ID.
     public override async Task<ProjectTask?> GetByIdAsync(Guid id, CancellationToken ct = default)
         => await Context.Tasks
             .Include(t => t.Votes)
+            .Include(t => t.Project)
             .FirstOrDefaultAsync(t => t.Id == id, ct);
+
+    public async Task<ProjectTask?> GetByDisplayIdAsync(string projectKey, int number, CancellationToken ct = default)
+        => await Context.Tasks
+            .Include(t => t.Votes)
+            .Include(t => t.Project)
+            .FirstOrDefaultAsync(t => t.Project!.Key == projectKey && t.Number == number, ct);
 
     public async Task<IReadOnlyList<ProjectTask>> GetByProjectAsync(
         Guid projectId, bool archived = false, int? completedWithinDays = null, CancellationToken ct = default)
     {
         var query = Context.Tasks
             .Include(t => t.Votes)
+            .Include(t => t.Project)
             .Where(t => t.ProjectId == projectId && t.IsArchived == archived);
 
         if (completedWithinDays is { } days)

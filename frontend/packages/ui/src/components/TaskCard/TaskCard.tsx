@@ -40,7 +40,10 @@ export function TaskCard({ task, epicName, epicColorHex, assigneeName, assigneeA
                 </span>
             )}
 
-            <PriorityBadge priority={task.priority} />
+            <div className={styles.topRow}>
+                <PriorityBadge priority={task.priority} />
+                {task.displayId && <span className={styles.displayId}>{task.displayId}</span>}
+            </div>
 
             <p className={styles.title}>{task.title}</p>
 
