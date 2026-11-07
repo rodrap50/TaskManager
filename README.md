@@ -39,6 +39,8 @@ Either way, the same ports:
 
 To archive Done and Cancelled tasks automatically, set `TaskArchiving__AutoArchiveAfterDays` on the API (commented example in both compose files). It is off by default; you can always archive from the board's **Archived** panel.
 
+To run the monolith against an external Postgres, set `DatabaseSettings__ConnectionString`, `MCP_DB_CONNECTION_STRING` and `DISABLE_BUNDLED_POSTGRES=1` (commented example in `docker-compose.yml`). The bundled Postgres is then neither initialized nor started.
+
 The API's gRPC port (8082) and Postgres are never published. Data persists under `/mnt/user/appdata/taskmanager/` (monolith) or `/mnt/user/appdata/taskmanager-ms/` (microservices).
 
 ## Releases

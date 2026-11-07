@@ -21,8 +21,12 @@ services:
       - Jwt__Secret=${JWT_SECRET:?Set JWT_SECRET in a .env file — see .env.example}
       # Optional overrides — uncomment to point at a different/external
       # Postgres instead of the one bundled in this same container. If you
-      # do, update POSTGRES_PASSWORD and MCP_DB_CONNECTION_STRING to match.
+      # do, update POSTGRES_PASSWORD and MCP_DB_CONNECTION_STRING to match,
+      # and set DISABLE_BUNDLED_POSTGRES so the bundled one isn't started
+      # (otherwise the API and MCP wait for it on localhost).
       # - DatabaseSettings__ConnectionString=Host=db;Port=5432;Database=taskmanager;Username=postgres;Password=...
+      # - MCP_DB_CONNECTION_STRING=Host=db;Port=5432;Database=McpTracking;Username=postgres;Password=...
+      # - DISABLE_BUNDLED_POSTGRES=1
       # - SEQ_URL=http://seq:5341
       # - LOG_FILE_PATH=/app/api/logs/taskmanager-.log
       # Archive Done/Cancelled tasks automatically N days after they close (unset = off).
