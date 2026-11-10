@@ -33,9 +33,10 @@ public class UpdateTaskCommandValidator : AbstractValidator<UpdateTaskCommand>
         // the current assignee on every save regardless of whether it changed, so rejecting an
         // unchanged value here would make a task un-editable the moment its assignee is later
         // removed from the project.
+        // The epic gets the same changed-only check: an epic must belong to the task's project.
         RuleFor(x => x).CustomAsync(async (cmd, context, ct) =>
         {
-            if (!cmd.AssignedUserId.HasValue && !cmd.SecondaryAssigneeId.HasValue) return;
+            if (!cmd.AssignedUserId.HasValue && !cmd.SecondaryAssigneeId.HasValue && !cmd.EpicId.HasValue) return;
 
             var task = await uow.Tasks.GetByIdAsync(cmd.Id, ct);
             if (task is null) return; // let the handler's null-check 404 this instead
@@ -52,6 +53,13 @@ public class UpdateTaskCommandValidator : AbstractValidator<UpdateTaskCommand>
                 && !await uow.Projects.IsMemberAsync(task.ProjectId, cmd.SecondaryAssigneeId.Value, ct))
             {
                 context.AddFailure("SecondaryAssigneeId", "Secondary assignee must be a member of the task's project.");
+            }
+
+            if (cmd.EpicId.HasValue
+                && cmd.EpicId != task.EpicId
+                && (await uow.Epics.GetByIdAsync(cmd.EpicId.Value, ct))?.ProjectId != task.ProjectId)
+            {
+                context.AddFailure("EpicId", "Epic must belong to the task's project.");
             }
         });
     }

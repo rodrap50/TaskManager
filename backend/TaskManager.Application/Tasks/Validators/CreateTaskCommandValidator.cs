@@ -29,5 +29,10 @@ public class CreateTaskCommandValidator : AbstractValidator<CreateTaskCommand>
         RuleFor(x => x.AssignedUserId)
             .MustAsync(async (cmd, userId, ct) => !userId.HasValue || await uow.Projects.IsMemberAsync(cmd.ProjectId, userId.Value, ct))
             .WithMessage("Assignee must be a member of the project.");
+
+        RuleFor(x => x.EpicId)
+            .MustAsync(async (cmd, epicId, ct) => !epicId.HasValue
+                || (await uow.Epics.GetByIdAsync(epicId.Value, ct))?.ProjectId == cmd.ProjectId)
+            .WithMessage("Epic must belong to the task's project.");
     }
 }

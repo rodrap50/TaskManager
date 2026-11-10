@@ -171,6 +171,7 @@ export function BoardScreen() {
                 <CreateTaskModal
                     projectId={selectedProjectId}
                     members={members}
+                    epics={project?.scope === 'Project' ? epics : []}
                     onClose={() => setShowCreateTask(false)}
                     onCreated={refetchTasks}
                 />

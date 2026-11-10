@@ -6,6 +6,8 @@ export const useTaskFormStyles = () => ({
     priorityPillBase: 'min-h-11 flex-1 rounded-lg border py-1.5 text-sm font-medium transition-colors sm:min-h-0',
     priorityPillActive: 'border-transparent bg-primary-800 text-text-inverted',
     priorityPillInactive: 'border-border text-text-muted hover:border-border-subtle hover:text-text',
+    epicRow: 'mb-4 flex flex-wrap gap-2',
+    epicPillBase: 'min-h-11 max-w-full truncate rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors sm:min-h-0',
     dueDateWrap: 'mb-4',
     dueDateRow: 'flex items-center gap-2',
     dateInput: 'w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-text ' +

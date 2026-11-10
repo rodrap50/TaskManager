@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import type { AppUserDto } from '@taskmanager/shared';
+import type { AppUserDto, EpicDto } from '@taskmanager/shared';
 import { createTask } from '@taskmanager/shared';
 import { Modal } from '../../components/Modal';
 import { TaskForm } from './TaskForm';
@@ -8,11 +8,12 @@ import type { TaskFormValues } from './TaskForm';
 interface CreateTaskModalProps {
     projectId: string;
     members: AppUserDto[];
+    epics: EpicDto[];
     onClose: () => void;
     onCreated: () => void | Promise<void>;
 }
 
-export function CreateTaskModal({ projectId, members, onClose, onCreated }: CreateTaskModalProps) {
+export function CreateTaskModal({ projectId, members, epics, onClose, onCreated }: CreateTaskModalProps) {
     const [submitting, setSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +27,7 @@ export function CreateTaskModal({ projectId, members, onClose, onCreated }: Crea
                 priority: values.priority,
                 dueDate: values.dueDate ?? undefined,
                 assignedUserId: values.assigneeId ?? undefined,
+                epicId: values.epicId ?? undefined,
             });
             await onCreated();
             onClose();
@@ -40,6 +42,7 @@ export function CreateTaskModal({ projectId, members, onClose, onCreated }: Crea
         <Modal isOpen onClose={onClose} title="New Task">
             <TaskForm
                 members={members}
+                epics={epics}
                 onSubmit={values => void handleSubmit(values)}
                 onCancel={onClose}
                 submitting={submitting}

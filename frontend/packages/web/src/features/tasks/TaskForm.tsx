@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { AppUserDto } from '@taskmanager/shared';
+import type { AppUserDto, EpicDto } from '@taskmanager/shared';
 import { resolveAssetUrl } from '@taskmanager/shared';
 import { AssigneeAvatar } from '@taskmanager/ui';
 import { useTaskFormStyles } from './TaskForm.styles';
@@ -13,30 +13,34 @@ export interface TaskFormValues {
     priority: Priority;
     dueDate: string | null;
     assigneeId: string | null;
+    epicId: string | null;
 }
 
 interface TaskFormProps {
     members: AppUserDto[];
+    /** The project's epics; the picker is hidden when empty (no epics, or a DailyTask project). */
+    epics: EpicDto[];
     onSubmit: (values: TaskFormValues) => void;
     onCancel: () => void;
     submitting: boolean;
     error: string | null;
 }
 
-export function TaskForm({ members, onSubmit, onCancel, submitting, error }: TaskFormProps) {
+export function TaskForm({ members, epics, onSubmit, onCancel, submitting, error }: TaskFormProps) {
     const styles = useTaskFormStyles();
 
     const [title, setTitle]         = useState('');
     const [priority, setPriority]   = useState<Priority>('Medium');
     const [dueDate, setDueDate]     = useState('');
     const [assigneeId, setAssignee] = useState<string | null>(null);
+    const [epicId, setEpicId]       = useState<string | null>(null);
 
     const canSubmit = title.trim().length > 0 && !submitting;
 
     const handleSubmit = (e: FormEvent) => {
         e.preventDefault();
         if (!canSubmit) return;
-        onSubmit({ title: title.trim(), priority, dueDate: dueDate || null, assigneeId });
+        onSubmit({ title: title.trim(), priority, dueDate: dueDate || null, assigneeId, epicId });
     };
 
     return (
@@ -65,6 +69,31 @@ export function TaskForm({ members, onSubmit, onCancel, submitting, error }: Tas
                     </button>
                 ))}
             </div>
+
+            {epics.length > 0 && (
+                <>
+                    <label className={styles.label}>Epic</label>
+                    <div className={styles.epicRow}>
+                        <button
+                            type="button"
+                            onClick={() => setEpicId(null)}
+                            className={`${styles.epicPillBase} ${epicId === null ? styles.priorityPillActive : styles.priorityPillInactive}`}
+                        >
+                            None
+                        </button>
+                        {epics.map(e => (
+                            <button
+                                key={e.id}
+                                type="button"
+                                onClick={() => setEpicId(e.id)}
+                                className={`${styles.epicPillBase} ${epicId === e.id ? styles.priorityPillActive : styles.priorityPillInactive}`}
+                            >
+                                {e.name}
+                            </button>
+                        ))}
+                    </div>
+                </>
+            )}
 
             <label className={styles.label}>Due date</label>
             <div className={styles.dueDateWrap}>
